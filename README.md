@@ -1,6 +1,6 @@
-# Terminal Present
+# Keycode Terminal Based Presentation Tool
 
-Terminal-based presentation app for macOS Terminal.app.
+Terminal-based presentation app for terminal or console apps.
 
 ## Install
 
