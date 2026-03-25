@@ -45,7 +45,7 @@ What do you think?
   assert.equal(deck.slides[0]?.body, 'Ask the room:\nWhat do you think?');
 });
 
-test('parseSlides extracts image source from image-url blocks', () => {
+test('parseSlides strips image-url blocks from slide body', () => {
   const deck = parseSlides(`
 <image-url>
 lemi.png
@@ -53,8 +53,17 @@ lemi.png
 About the speaker
 `);
 
-  assert.equal(deck.slides[0]?.imageSource, 'lemi.png');
   assert.equal(deck.slides[0]?.body, 'About the speaker');
+});
+
+test('parseSlides extracts per-slide size directives', () => {
+  const deck = parseSlides(`
+<size>xlarge</size>
+Big slide
+`);
+
+  assert.equal(deck.slides[0]?.size, 'xlarge');
+  assert.equal(deck.slides[0]?.body, 'Big slide');
 });
 
 test('parseSlides extracts <title> block text and keeps the rest of slide content plain', () => {

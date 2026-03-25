@@ -1,3 +1,5 @@
+export type SlideSize = 'normal' | 'large' | 'xlarge';
+
 export interface Slide {
   index: number;
   raw: string;
@@ -5,7 +7,7 @@ export interface Slide {
   isAsciiArt: boolean;
   hasQuestion: boolean;
   titleText?: string;
-  imageSource?: string;
+  size: SlideSize;
 }
 
 export interface ParsedDeck {

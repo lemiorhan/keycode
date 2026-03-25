@@ -1,31 +1,25 @@
 <title>
-The Rebirth of 
-Software 
-Craftsmanship
-in the AI Era
+THE REBIRTH OF 
+SOFTWARE 
+CRAFTSMANSHIP
+IN AI ERA
 </title>
 
-
-
 Lemi Orhan Ergin
-Co-Founder at Craftgate
+Co-Founder @ Craftgate
 ---
-<image-url>
-image.png
-</image-url>
-
 Meet Lemi
+* Craftgate
+* speakerdeck
+* linkedin
 ---
 Ship your ideas
 
 from inside the shell
 ---
 Ask the room
-[QUESTION]
 What should we build next?
 ---
-
-<image-url>image.png</image-url>
 Thanks for watching
 ---
   /\_/\\\\

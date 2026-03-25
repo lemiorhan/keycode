@@ -1,5 +1,5 @@
 import type {ParsedDeck, Slide} from './types.js';
-import {extractImageSource} from './imageAscii.js';
+import {extractSlideSize} from './sizeTag.js';
 import {extractTitleBlock} from './titleArt.js';
 
 const SLIDE_SEPARATOR = /^---\s*$/m;
@@ -23,19 +23,20 @@ export function parseSlides(source: string): ParsedDeck {
     const withoutQuestionToken = raw
       .replace(/\n?[ \t]*\[QUESTION\][ \t]*\n?/g, '\n')
       .replaceAll(QUESTION_TOKEN, '')
+      .replace(/<image-url>\s*[\s\S]*?\s*<\/image-url>/gi, '')
       .replace(/[ \t]+\n/g, '\n');
-    const titleExtraction = extractTitleBlock(withoutQuestionToken);
-    const imageExtraction = extractImageSource(titleExtraction.body);
+    const sizeExtraction = extractSlideSize(withoutQuestionToken);
+    const titleExtraction = extractTitleBlock(sizeExtraction.body);
     const isAsciiArt = index === 0 || index === all.length - 1;
 
     return {
       index,
       raw,
-      body: imageExtraction.body,
+      body: titleExtraction.body,
       isAsciiArt,
       hasQuestion,
       titleText: titleExtraction.titleText,
-      imageSource: imageExtraction.imageSource
+      size: sizeExtraction.size
     };
   });
 

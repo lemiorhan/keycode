@@ -5,19 +5,19 @@ interface RenderSlideOptions {
   slide: Slide;
   answer?: QuestionState;
   questionInput?: string;
-  imageAscii?: string;
 }
 
-export function renderSlideTextContent(options: Omit<RenderSlideOptions, 'imageAscii'>): string {
+export function renderSlideTextContent(options: RenderSlideOptions): string {
   const {slide, answer, questionInput = ''} = options;
   const sections: string[] = [];
 
   if (slide.titleText) {
-    sections.push(renderTitleAscii(slide.titleText));
+    sections.push(renderTitleAscii(slide.titleText, slide.size));
   }
 
   if (slide.body.trim().length > 0) {
-    sections.push(slide.body.trimEnd());
+    const spacing = slide.size === 'normal' ? '\n' : '\n\n';
+    sections.push(slide.body.trimEnd().split('\n').join(spacing));
   }
 
   if (slide.hasQuestion) {
@@ -28,18 +28,5 @@ export function renderSlideTextContent(options: Omit<RenderSlideOptions, 'imageA
 }
 
 export function renderSlideContent(options: RenderSlideOptions): string {
-  const {slide, imageAscii} = options;
-  const sections: string[] = [];
-
-  if (imageAscii) {
-    sections.push(imageAscii);
-  }
-
-  const textContent = renderSlideTextContent(options);
-
-  if (textContent) {
-    sections.push(textContent);
-  }
-
-  return sections.join('\n\n').trimEnd();
+  return renderSlideTextContent(options);
 }

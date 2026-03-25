@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import path from 'node:path';
 import React from 'react';
 import {render} from 'ink';
 import {parseSlides} from './parser.js';
@@ -17,7 +16,6 @@ async function main(): Promise<void> {
 
   const source = await readSlidesFile(slidesPath);
   const deck = parseSlides(source);
-  const deckDir = path.dirname(path.resolve(slidesPath));
 
   if (deck.slides.length === 0) {
     console.error('No slides found in the provided file.');
@@ -25,7 +23,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  render(<PresentationApp deckDir={deckDir} slides={deck.slides} />, {
+  render(<PresentationApp slides={deck.slides} />, {
     exitOnCtrlC: false
   });
 }

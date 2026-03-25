@@ -23,7 +23,6 @@ Example:
 ```text
 my-talk/
   slides.md
-  image.png
 ```
 
 If you want to run `present` without `./`, add this repo to your `PATH`, symlink the script into a directory on your `PATH`, or install the package globally.
@@ -53,29 +52,29 @@ Lemi Orhan Ergin
 Co-Founder at Craftgate
 ```
 
-The title is rendered automatically as centered block-style terminal art.
+The title is rendered automatically inside a centered ASCII box with padding and margin.
 
-## Image slides
+## Slide sizes
 
-Use `<image-url>...</image-url>` inside any slide.
+Use `<size>...</size>` inside a slide to increase its visual presence.
+
+Supported values:
+
+- `normal`
+- `large`
+- `xlarge`
 
 Example:
 
 ```md
-<image-url>
-image.png
-</image-url>
-
-Meet Lemi
+<size>xlarge</size>
+<title>
+The Rebirth of Software Craftsmanship
+in the AI Era
+</title>
 ```
 
-Behavior:
-
-- Local image paths are resolved relative to the folder containing `slides.md`.
-- HTTP(S) image URLs are also supported.
-- Image slides render the image on the left side of the terminal.
-- The slide text is centered inside the empty area on the right.
-- Image slides skip the scramble transition so ANSI image rendering stays intact.
+Image tags are ignored if present in old decks.
 
 ## Controls
 

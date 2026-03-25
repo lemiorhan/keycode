@@ -34,6 +34,10 @@ function cropLine(line: string, columns: number): string {
   return output;
 }
 
+function shouldCenterAsBlock(lines: string[]): boolean {
+  return lines.some((line) => line.trimStart().startsWith('* '));
+}
+
 export function centerTextBlock(content: string, options: RenderOptions): string {
   const rows = Math.max(options.rows, 1);
   const columns = Math.max(options.columns, 1);
@@ -44,8 +48,13 @@ export function centerTextBlock(content: string, options: RenderOptions): string
   const croppedLines = rawLines.map((line) => cropLine(line, columns));
   const visibleLines = croppedLines.slice(0, usableRows);
   const topPad = Math.max(Math.floor((usableRows - visibleLines.length) / 2), 0);
+  const centerAsBlock = shouldCenterAsBlock(visibleLines);
+  const blockWidth = centerAsBlock
+    ? Math.max(...visibleLines.map((line) => visibleWidth(line)), 0)
+    : 0;
   const centeredLines = visibleLines.map((line) => {
-    const leftPad = Math.max(Math.floor((columns - visibleWidth(line)) / 2), 0);
+    const targetWidth = centerAsBlock ? blockWidth : visibleWidth(line);
+    const leftPad = Math.max(Math.floor((columns - targetWidth) / 2), 0);
     return `${' '.repeat(leftPad)}${line}`;
   });
 
@@ -83,13 +92,18 @@ export function composeImageLeftLayout(
   const rightPaneWidth = Math.max(columns - leftMargin - imageWidth - gap, 12);
   const imageTop = Math.max(Math.floor((usableRows - imageLines.length) / 2), 0);
   const textTop = Math.max(Math.floor((usableRows - textLines.length) / 2), 0);
+  const centerTextAsBlock = shouldCenterAsBlock(textLines);
+  const textBlockWidth = centerTextAsBlock
+    ? Math.max(...textLines.map((line) => visibleWidth(line)), 0)
+    : 0;
   const frameLines: string[] = [];
 
   for (let row = 0; row < usableRows; row += 1) {
     const imageLine = imageLines[row - imageTop] ?? '';
     const imagePad = Math.max(imageWidth - visibleWidth(imageLine), 0);
     const textLine = textLines[row - textTop] ?? '';
-    const textLeft = Math.max(Math.floor((rightPaneWidth - visibleWidth(textLine)) / 2), 0);
+    const targetWidth = centerTextAsBlock ? textBlockWidth : visibleWidth(textLine);
+    const textLeft = Math.max(Math.floor((rightPaneWidth - targetWidth) / 2), 0);
 
     frameLines.push(
       `${' '.repeat(leftMargin)}${imageLine}${' '.repeat(imagePad)}${' '.repeat(gap)}${' '.repeat(textLeft)}${textLine}`
