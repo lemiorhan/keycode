@@ -12,6 +12,7 @@ Meet Lemi
 * Craftgate
 * speakerdeck
 * linkedin
+<qr>https://lemiorhanergin.com</qr>
 ---
 Ship your ideas
 

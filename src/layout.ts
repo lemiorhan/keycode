@@ -38,16 +38,10 @@ function shouldCenterAsBlock(lines: string[]): boolean {
   return lines.some((line) => line.trimStart().startsWith('* '));
 }
 
-export function centerTextBlock(content: string, options: RenderOptions): string {
-  const rows = Math.max(options.rows, 1);
-  const columns = Math.max(options.columns, 1);
-  const hintLine = options.hintLine ?? '';
-  const reservedHintRows = hintLine ? 1 : 0;
-  const usableRows = Math.max(rows - reservedHintRows, 1);
-  const rawLines = content.split('\n');
-  const croppedLines = rawLines.map((line) => cropLine(line, columns));
-  const visibleLines = croppedLines.slice(0, usableRows);
-  const topPad = Math.max(Math.floor((usableRows - visibleLines.length) / 2), 0);
+function centerLines(lines: string[], rows: number, columns: number): string[] {
+  const croppedLines = lines.map((line) => cropLine(line, columns));
+  const visibleLines = croppedLines.slice(0, rows);
+  const topPad = Math.max(Math.floor((rows - visibleLines.length) / 2), 0);
   const centerAsBlock = shouldCenterAsBlock(visibleLines);
   const blockWidth = centerAsBlock
     ? Math.max(...visibleLines.map((line) => visibleWidth(line)), 0)
@@ -63,8 +57,70 @@ export function centerTextBlock(content: string, options: RenderOptions): string
     ...centeredLines
   ];
 
-  while (frameLines.length < usableRows) {
+  while (frameLines.length < rows) {
     frameLines.push('');
+  }
+
+  return frameLines;
+}
+
+export function centerTextBlock(content: string, options: RenderOptions): string {
+  const rows = Math.max(options.rows, 1);
+  const columns = Math.max(options.columns, 1);
+  const hintLine = options.hintLine ?? '';
+  const reservedHintRows = hintLine ? 1 : 0;
+  const usableRows = Math.max(rows - reservedHintRows, 1);
+  const rawLines = content.split('\n');
+  const frameLines = centerLines(rawLines, usableRows, columns);
+
+  if (hintLine) {
+    frameLines.push(cropLine(hintLine, columns));
+  }
+
+  return frameLines.join('\n');
+}
+
+export function composeBottomRightOverlayLayout(
+  textContent: string,
+  overlayContent: string,
+  options: RenderOptions
+): string {
+  const rows = Math.max(options.rows, 1);
+  const columns = Math.max(options.columns, 1);
+  const hintLine = options.hintLine ?? '';
+  const reservedHintRows = hintLine ? 1 : 0;
+  const usableRows = Math.max(rows - reservedHintRows, 1);
+  const textLines = textContent.split('\n');
+  const overlayLines = overlayContent.split('\n');
+  const overlayWidth = Math.max(...overlayLines.map((line) => visibleWidth(line)), 0);
+  const overlayHeight = overlayLines.length;
+  const rightMargin = 2;
+  const bottomMargin = 1;
+  const gap = 4;
+  const leftPaneWidth = Math.max(columns - overlayWidth - gap - rightMargin, 1);
+  const centeredTextLines = centerLines(textLines, usableRows, leftPaneWidth);
+  const overlayLeft = Math.max(columns - rightMargin - overlayWidth, 0);
+  const overlayTop = Math.max(usableRows - bottomMargin - overlayHeight, 0);
+  const frameLines: string[] = [];
+
+  for (let row = 0; row < usableRows; row += 1) {
+    const baseLine = centeredTextLines[row] ?? '';
+    const rowChars = baseLine.padEnd(columns, ' ').split('');
+    const overlayLine = overlayLines[row - overlayTop];
+
+    if (overlayLine !== undefined) {
+      const paddedOverlay = overlayLine.padEnd(overlayWidth, ' ');
+
+      for (
+        let column = 0;
+        column < paddedOverlay.length && overlayLeft + column < rowChars.length;
+        column += 1
+      ) {
+        rowChars[overlayLeft + column] = paddedOverlay[column] ?? ' ';
+      }
+    }
+
+    frameLines.push(rowChars.join('').replace(/\s+$/g, ''));
   }
 
   if (hintLine) {

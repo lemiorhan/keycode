@@ -76,6 +76,31 @@ in the AI Era
 
 Image tags are ignored if present in old decks.
 
+## QR blocks
+
+Use `<qr>...</qr>` to place a QR code on a slide.
+
+Example:
+
+```md
+<title>
+Join the live notes
+</title>
+
+<qr>
+https://example.com/talk
+</qr>
+
+Scan to follow along
+```
+
+Behavior:
+
+- The QR is rendered in monochrome terminal blocks.
+- It is anchored to the bottom-right of the terminal.
+- The rest of the slide is centered in the remaining space and will not overlap the QR.
+- QR slides skip the scramble transition so the code stays scannable.
+
 ## Controls
 
 - `Right` / `Down`: next slide

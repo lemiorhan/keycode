@@ -7,6 +7,7 @@ export interface Slide {
   isAsciiArt: boolean;
   hasQuestion: boolean;
   titleText?: string;
+  qrText?: string;
   size: SlideSize;
 }
 

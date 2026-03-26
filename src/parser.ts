@@ -1,4 +1,5 @@
 import type {ParsedDeck, Slide} from './types.js';
+import {extractQrBlock} from './qrTag.js';
 import {extractSlideSize} from './sizeTag.js';
 import {extractTitleBlock} from './titleArt.js';
 
@@ -26,7 +27,8 @@ export function parseSlides(source: string): ParsedDeck {
       .replace(/<image-url>\s*[\s\S]*?\s*<\/image-url>/gi, '')
       .replace(/[ \t]+\n/g, '\n');
     const sizeExtraction = extractSlideSize(withoutQuestionToken);
-    const titleExtraction = extractTitleBlock(sizeExtraction.body);
+    const qrExtraction = extractQrBlock(sizeExtraction.body);
+    const titleExtraction = extractTitleBlock(qrExtraction.body);
     const isAsciiArt = index === 0 || index === all.length - 1;
 
     return {
@@ -36,6 +38,7 @@ export function parseSlides(source: string): ParsedDeck {
       isAsciiArt,
       hasQuestion,
       titleText: titleExtraction.titleText,
+      qrText: qrExtraction.qrText,
       size: sizeExtraction.size
     };
   });

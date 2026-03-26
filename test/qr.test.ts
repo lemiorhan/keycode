@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {renderTerminalQr} from '../src/qr.js';
+import {shouldSkipTransition} from '../src/transitionPolicy.js';
+import type {Slide} from '../src/types.js';
+
+test('renderTerminalQr creates a consistent block qr with padded rows', () => {
+  const rendered = renderTerminalQr('https://craftgate.io/talk', {
+    maxColumns: 80,
+    maxRows: 40
+  });
+
+  const lines = rendered.output.split('\n');
+
+  assert.equal(lines.length, rendered.height);
+  assert.equal(lines.every((line) => line.length === rendered.width), true);
+  assert.equal(lines.some((line) => /[█▀▄]/.test(line)), true);
+});
+
+test('renderTerminalQr falls back safely when viewport is too small', () => {
+  const rendered = renderTerminalQr('https://craftgate.io/talk', {
+    maxColumns: 4,
+    maxRows: 1
+  });
+
+  assert.equal(rendered.output, '[QR too large]');
+});
+
+test('shouldSkipTransition skips qr slides', () => {
+  const slide: Slide = {
+    index: 0,
+    raw: '<qr>https://craftgate.io</qr>',
+    body: '',
+    isAsciiArt: false,
+    hasQuestion: false,
+    qrText: 'https://craftgate.io',
+    size: 'normal'
+  };
+
+  assert.equal(shouldSkipTransition(slide, 'body'), true);
+});

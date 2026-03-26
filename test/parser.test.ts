@@ -66,6 +66,33 @@ Big slide
   assert.equal(deck.slides[0]?.body, 'Big slide');
 });
 
+test('parseSlides extracts qr blocks and removes them from body content', () => {
+  const deck = parseSlides(`
+<qr>
+https://craftgate.io/talk
+</qr>
+Scan this to follow along
+`);
+
+  assert.equal(deck.slides[0]?.qrText, 'https://craftgate.io/talk');
+  assert.equal(deck.slides[0]?.body, 'Scan this to follow along');
+});
+
+test('parseSlides keeps the first qr block and ignores later ones', () => {
+  const deck = parseSlides(`
+<qr>
+https://first.example
+</qr>
+<qr>
+https://second.example
+</qr>
+Slide body
+`);
+
+  assert.equal(deck.slides[0]?.qrText, 'https://first.example');
+  assert.equal(deck.slides[0]?.body, 'Slide body');
+});
+
 test('parseSlides extracts <title> block text and keeps the rest of slide content plain', () => {
   const deck = parseSlides(`
 <title>
