@@ -1,14 +1,20 @@
 import type {QuestionState, Slide} from './types.js';
+import {renderInlineColors} from './colorText.js';
+import {renderParagraphBlocks} from './paragraphTag.js';
 import {renderTitleAscii} from './titleArt.js';
+
+const FOOTNOTE_COLOR = '\x1b[90m';
+const ANSI_RESET = '\x1b[39m';
 
 interface RenderSlideOptions {
   slide: Slide;
   answer?: QuestionState;
   questionInput?: string;
+  mediaError?: string;
 }
 
 export function renderSlideTextContent(options: RenderSlideOptions): string {
-  const {slide, answer, questionInput = ''} = options;
+  const {slide, answer, questionInput = '', mediaError} = options;
   const sections: string[] = [];
 
   if (slide.titleText) {
@@ -17,14 +23,31 @@ export function renderSlideTextContent(options: RenderSlideOptions): string {
 
   if (slide.body.trim().length > 0) {
     const spacing = slide.size === 'normal' ? '\n' : '\n\n';
-    sections.push(slide.body.trimEnd().split('\n').join(spacing));
+    const bodyWithParagraphs = renderParagraphBlocks(slide.body.trimEnd());
+    sections.push(renderInlineColors(bodyWithParagraphs.split('\n').join(spacing)));
   }
 
   if (slide.hasQuestion) {
     sections.push(`Answer: ${answer?.answer ?? questionInput}`);
   }
 
+  if (mediaError) {
+    sections.push(mediaError);
+  }
+
   return sections.join('\n\n').trimEnd();
+}
+
+export function renderSlideFootnote(slide: Slide): string | undefined {
+  if (!slide.footnote?.trim()) {
+    return undefined;
+  }
+
+  return slide.footnote
+    .trimEnd()
+    .split('\n')
+    .map((line) => `${FOOTNOTE_COLOR}${renderInlineColors(line)}${ANSI_RESET}`)
+    .join('\n');
 }
 
 export function renderSlideContent(options: RenderSlideOptions): string {

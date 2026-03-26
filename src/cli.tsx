@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {dirname, resolve} from 'node:path';
 import React from 'react';
 import {render} from 'ink';
 import {parseSlides} from './parser.js';
@@ -6,14 +7,16 @@ import {readSlidesFile} from './file.js';
 import {PresentationApp} from './PresentationApp.js';
 
 async function main(): Promise<void> {
-  const slidesPath = process.argv[2];
+  const slidesPathInput = process.argv[2];
 
-  if (!slidesPath) {
+  if (!slidesPathInput) {
     console.error('Usage: present <slides-file>');
     process.exitCode = 1;
     return;
   }
 
+  const slidesPath = resolve(slidesPathInput);
+  const deckDirectory = dirname(slidesPath);
   const source = await readSlidesFile(slidesPath);
   const deck = parseSlides(source);
 
@@ -23,7 +26,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  render(<PresentationApp slides={deck.slides} />, {
+  render(<PresentationApp slides={deck.slides} deckDirectory={deckDirectory} />, {
     exitOnCtrlC: false
   });
 }

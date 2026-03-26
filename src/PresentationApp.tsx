@@ -1,9 +1,11 @@
 import {Box, Text, useApp, useInput, useStdout} from 'ink';
+import {access} from 'node:fs/promises';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {centerTextBlock, composeBottomRightOverlayLayout} from './layout.js';
-import {renderTerminalQr} from './qr.js';
+import {centerTextBlock, composeTwoScreenLayout} from './layout.js';
+import {ensureQrImage, ExternalMediaViewer, resolveDeckImagePath} from './externalQr.js';
+import {slideDefaultAlign} from './slideAlign.js';
 import type {QuestionState, Slide} from './types.js';
-import {renderSlideTextContent} from './renderSlide.js';
+import {renderSlideFootnote, renderSlideTextContent} from './renderSlide.js';
 import {buildTransitionFrames} from './transition.js';
 import {shouldSkipTransition} from './transitionPolicy.js';
 import {useBlinkCursor} from './useBlink.js';
@@ -11,6 +13,7 @@ import {useQuestionInput} from './useQuestionInput.js';
 
 interface PresentationAppProps {
   slides: Slide[];
+  deckDirectory: string;
 }
 
 const TRANSITION_MS = 34;
@@ -22,14 +25,18 @@ function addCursor(content: string, cursorVisible: boolean): string {
   return `${content}${cursor}`;
 }
 
-export function PresentationApp({slides}: PresentationAppProps): React.JSX.Element {
+export function PresentationApp({slides, deckDirectory}: PresentationAppProps): React.JSX.Element {
   const {exit} = useApp();
   const {stdout} = useStdout();
   const [slideIndex, setSlideIndex] = useState(0);
   const [frame, setFrame] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(true);
+  const [displayAlign, setDisplayAlign] = useState(() => slideDefaultAlign(slides[0]));
+  const [displayFootnote, setDisplayFootnote] = useState<string | undefined>(undefined);
+  const [mediaError, setMediaError] = useState<string | undefined>(undefined);
   const [answers, setAnswers] = useState<Record<number, QuestionState>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const externalMediaViewerRef = useRef(new ExternalMediaViewer());
   const questionLocked = slides[slideIndex]?.hasQuestion && !answers[slideIndex];
   const blinkVisible = useBlinkCursor();
   const currentSlide = slides[slideIndex];
@@ -62,23 +69,20 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
     return renderSlideTextContent({
       slide: currentSlide,
       answer: answers[slideIndex],
-      questionInput
+      questionInput,
+      mediaError
     });
-  }, [answers, currentSlide, questionInput, slideIndex]);
+  }, [answers, currentSlide, mediaError, questionInput, slideIndex]);
 
-  const qrRender = useMemo(() => {
-    if (!currentSlide?.qrText) {
+  const renderedFootnote = useMemo(() => {
+    if (!currentSlide) {
       return undefined;
     }
 
-    const maxColumns = Math.max(Math.floor(columns * 0.4), 12);
-    const maxRows = Math.max(rows - 2, 4);
+    return renderSlideFootnote(currentSlide);
+  }, [currentSlide]);
 
-    return renderTerminalQr(currentSlide.qrText, {
-      maxColumns,
-      maxRows
-    });
-  }, [columns, currentSlide, rows]);
+  const effectiveAlign = slideDefaultAlign(currentSlide);
 
   useEffect(() => {
     if (!currentSlide) {
@@ -93,6 +97,8 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
     const skipTransition = shouldSkipTransition(currentSlide, renderedTextContent);
 
     if (skipTransition) {
+      setDisplayAlign(effectiveAlign);
+      setDisplayFootnote(renderedFootnote);
       setFrame(renderedTextContent);
       setIsTransitioning(false);
       return () => {
@@ -105,9 +111,8 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
 
     const steps = columns < 60 || rows < 16 ? COMPACT_TRANSITION_STEPS : NORMAL_TRANSITION_STEPS;
     const frames = buildTransitionFrames(renderedTextContent, steps);
-    let currentStep = 0;
+    let currentStep = -1;
     setIsTransitioning(true);
-    setFrame(frames[0]?.output ?? renderedTextContent);
 
     timerRef.current = setInterval(() => {
       currentStep += 1;
@@ -118,6 +123,8 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
           timerRef.current = null;
         }
 
+        setDisplayAlign(effectiveAlign);
+        setDisplayFootnote(renderedFootnote);
         setFrame(renderedTextContent);
         setIsTransitioning(false);
         return;
@@ -132,7 +139,86 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
         timerRef.current = null;
       }
     };
-  }, [columns, currentSlide, renderedTextContent, rows]);
+  }, [columns, currentSlide, effectiveAlign, renderedFootnote, renderedTextContent, rows]);
+
+  useEffect(() => {
+    const viewer = externalMediaViewerRef.current;
+
+    if (!currentSlide?.imagePath && !currentSlide?.qrText) {
+      setMediaError(undefined);
+      viewer.close();
+      return;
+    }
+
+    let cancelled = false;
+
+    if (currentSlide?.imagePath) {
+      const imagePath = resolveDeckImagePath(deckDirectory, currentSlide.imagePath);
+
+      void access(imagePath)
+        .then(() => {
+          if (!cancelled) {
+            setMediaError(undefined);
+            viewer.open(imagePath, {
+              align: 'center',
+              widthPercent: currentSlide.imageWidthPercent,
+              backgroundColor: currentSlide.imageBackgroundColor,
+              panePosition: 'left',
+              screens:
+                currentSlide.screens && currentSlide.screens.length === 2
+                  ? [currentSlide.screens[0], currentSlide.screens[1]]
+                  : undefined
+            });
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setMediaError(`[image not found: ${currentSlide.imagePath}]`);
+            viewer.close();
+          }
+        });
+    } else if (currentSlide?.qrText) {
+      setMediaError(undefined);
+      void ensureQrImage(deckDirectory, currentSlide.qrText)
+        .then((imagePath) => {
+          if (!cancelled) {
+            viewer.open(imagePath, {
+              position: 'right',
+              align: 'bottom',
+              widthPercent: currentSlide.qrWidthPercent,
+              intrinsicWidth: 1,
+              intrinsicHeight: 1
+            });
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            viewer.close();
+          }
+        });
+    }
+
+    return () => {
+      cancelled = true;
+      viewer.close();
+    };
+  }, [
+    currentSlide?.imagePath,
+    currentSlide?.imageWidthPercent,
+    currentSlide?.imageBackgroundColor,
+    currentSlide?.screens,
+    currentSlide?.qrText,
+    currentSlide?.qrWidthPercent,
+    deckDirectory
+  ]);
+
+  useEffect(() => {
+    const viewer = externalMediaViewerRef.current;
+
+    return () => {
+      viewer.close();
+    };
+  }, []);
 
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
@@ -160,19 +246,50 @@ export function PresentationApp({slides}: PresentationAppProps): React.JSX.Eleme
   });
 
   const visibleTextFrame = isTransitioning ? frame : addCursor(frame, blinkVisible);
-  const finalFrame = qrRender
-    ? composeBottomRightOverlayLayout(visibleTextFrame, qrRender.output, {
-        rows,
-        columns
-      })
-    : centerTextBlock(visibleTextFrame, {
-        rows,
-        columns
-      });
+  const finalFrame = centerTextBlock(visibleTextFrame, {
+    rows,
+    columns,
+    align: isTransitioning ? displayAlign : effectiveAlign,
+    footerContent: isTransitioning ? displayFootnote : renderedFootnote
+  });
+  const screens =
+    currentSlide?.screens && currentSlide.screens.length === 2
+      ? (currentSlide.screens as [typeof currentSlide.screens[0], typeof currentSlide.screens[1]])
+      : undefined;
+  const frameWithScreens =
+    currentSlide?.asciiArt && screens
+      ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
+          rows,
+          columns,
+          footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+          screens
+        })
+      : currentSlide?.asciiArt
+        ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
+            rows,
+            columns,
+            footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+            screens: [
+              {widthPercent: 40, contentAlign: 'center'},
+              {widthPercent: 60, contentAlign: isTransitioning ? displayAlign : effectiveAlign}
+            ]
+          })
+        : currentSlide?.imagePath && screens
+          ? composeTwoScreenLayout(
+              '',
+              visibleTextFrame,
+              {
+                rows,
+                columns,
+                footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+                screens
+              }
+            )
+          : finalFrame;
 
   return (
     <Box width="100%" height="100%">
-      <Text>{finalFrame}</Text>
+      <Text>{frameWithScreens}</Text>
     </Box>
   );
 }

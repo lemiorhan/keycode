@@ -15,3 +15,11 @@ test('buildTransitionFrames preserves spaces and newlines while scrambling', () 
   assert.equal(frames[0]?.output.includes(' '), true);
   assert.equal(frames[0]?.output.includes('\n'), true);
 });
+
+test('buildTransitionFrames preserves ansi sequences while scrambling visible text', () => {
+  const frames = buildTransitionFrames('\x1b[36mAB\x1b[39m', 3, 2);
+
+  assert.equal(frames[0]?.output.includes('\x1b[36m'), true);
+  assert.equal(frames[0]?.output.includes('\x1b[39m'), true);
+  assert.equal(frames.at(-1)?.output, '\x1b[36mAB\x1b[39m');
+});

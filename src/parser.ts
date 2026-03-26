@@ -1,5 +1,10 @@
 import type {ParsedDeck, Slide} from './types.js';
+import {extractSlideAlign} from './alignTag.js';
+import {extractAsciiArtBlock} from './asciiArtTag.js';
+import {extractFootnoteBlock} from './footnoteTag.js';
+import {extractImageTag} from './imageTag.js';
 import {extractQrBlock} from './qrTag.js';
+import {extractScreenTags} from './screenTag.js';
 import {extractSlideSize} from './sizeTag.js';
 import {extractTitleBlock} from './titleArt.js';
 
@@ -26,19 +31,32 @@ export function parseSlides(source: string): ParsedDeck {
       .replaceAll(QUESTION_TOKEN, '')
       .replace(/<image-url>\s*[\s\S]*?\s*<\/image-url>/gi, '')
       .replace(/[ \t]+\n/g, '\n');
-    const sizeExtraction = extractSlideSize(withoutQuestionToken);
-    const qrExtraction = extractQrBlock(sizeExtraction.body);
-    const titleExtraction = extractTitleBlock(qrExtraction.body);
+    const alignExtraction = extractSlideAlign(withoutQuestionToken);
+    const sizeExtraction = extractSlideSize(alignExtraction.body);
+    const screenExtraction = extractScreenTags(sizeExtraction.body);
+    const qrExtraction = extractQrBlock(screenExtraction.body);
+    const imageExtraction = extractImageTag(qrExtraction.body);
+    const asciiArtExtraction = extractAsciiArtBlock(imageExtraction.body);
+    const footnoteExtraction = extractFootnoteBlock(asciiArtExtraction.body);
+    const titleExtraction = extractTitleBlock(footnoteExtraction.body);
     const isAsciiArt = index === 0 || index === all.length - 1;
 
     return {
       index,
       raw,
       body: titleExtraction.body,
+      footnote: footnoteExtraction.footnote,
+      asciiArt: asciiArtExtraction.asciiArt,
+      screens: screenExtraction.screens,
       isAsciiArt,
       hasQuestion,
       titleText: titleExtraction.titleText,
       qrText: qrExtraction.qrText,
+      qrWidthPercent: qrExtraction.qrWidthPercent,
+      imagePath: imageExtraction.imagePath,
+      imageWidthPercent: imageExtraction.imageWidthPercent,
+      imageBackgroundColor: imageExtraction.imageBackgroundColor,
+      align: alignExtraction.align,
       size: sizeExtraction.size
     };
   });

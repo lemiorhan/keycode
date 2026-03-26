@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {renderSlideContent} from '../src/renderSlide.js';
+import {renderSlideContent, renderSlideFootnote} from '../src/renderSlide.js';
 import type {Slide} from '../src/types.js';
 
 test('renderSlideContent renders title text inside a box and keeps body content', () => {
@@ -11,6 +11,7 @@ test('renderSlideContent renders title text inside a box and keeps body content'
     isAsciiArt: true,
     hasQuestion: false,
     titleText: 'Hello',
+    align: 'center',
     size: 'normal'
   };
 
@@ -30,6 +31,7 @@ test('renderSlideContent appends question input after title/body content', () =>
     isAsciiArt: false,
     hasQuestion: true,
     titleText: 'Ask',
+    align: 'center',
     size: 'normal'
   };
 
@@ -50,6 +52,7 @@ test('renderSlideContent renders multi-line titles inside a padded box', () => {
     isAsciiArt: true,
     hasQuestion: false,
     titleText: 'Hello\nWorld',
+    align: 'center',
     size: 'normal'
   };
 
@@ -69,10 +72,115 @@ test('renderSlideContent increases vertical spacing for large slides', () => {
     body: 'Line one\nLine two',
     isAsciiArt: false,
     hasQuestion: false,
+    align: 'center',
     size: 'large'
   };
 
   const rendered = renderSlideContent({slide});
 
   assert.equal(rendered.includes('Line one\n\nLine two'), true);
+});
+
+test('renderSlideContent renders inline foreground colors with ansi escapes', () => {
+  const slide: Slide = {
+    index: 3,
+    raw: 'This is <color fg="cyan">highlighted</color> text',
+    body: 'This is <color fg="cyan">highlighted</color> text',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.includes('<color'), false);
+  assert.match(rendered, /\x1b\[36mhighlighted\x1b\[39m/);
+});
+
+test('renderSlideFootnote renders multi-line gray footnotes', () => {
+  const slide: Slide = {
+    index: 4,
+    raw: '<footnote>Source\nSecond line</footnote>',
+    body: '',
+    footnote: 'Source\nSecond line',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideFootnote(slide);
+
+  assert.match(rendered ?? '', /\x1b\[90mSource\x1b\[39m/);
+  assert.match(rendered ?? '', /\x1b\[90mSecond line\x1b\[39m/);
+});
+
+test('renderSlideContent soft-wraps paragraph blocks to max width', () => {
+  const slide: Slide = {
+    index: 5,
+    raw: '<p max-width=12>Alpha beta gamma delta</p>',
+    body: '<p max-width=12>Alpha beta gamma delta</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.includes('<p'), false);
+  assert.match(rendered, /Alpha beta/);
+  assert.match(rendered, /gamma delta/);
+});
+
+test('renderSlideContent supports align as a paragraph property', () => {
+  const slide: Slide = {
+    index: 6,
+    raw: '<p max-width=12 align=right>Alpha beta</p>',
+    body: '<p max-width=12 align=right>Alpha beta</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.split('\n')[0], '  Alpha beta');
+});
+
+test('renderSlideContent preserves explicit newlines inside paragraph blocks', () => {
+  const slide: Slide = {
+    index: 7,
+    raw: '<p max-width=12>Alpha beta\ngamma delta\n\nepsilon zeta</p>',
+    body: '<p max-width=12>Alpha beta\ngamma delta\n\nepsilon zeta</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  const lines = rendered.split('\n');
+
+  assert.equal(lines.length, 4);
+  assert.match(lines[0] ?? '', /Alpha beta/);
+  assert.match(lines[1] ?? '', /gamma delta/);
+  assert.equal(lines[2], '');
+  assert.match(lines[3] ?? '', /epsilon zeta/);
+});
+
+test('renderSlideContent appends media errors after the slide body', () => {
+  const slide: Slide = {
+    index: 8,
+    raw: 'Body',
+    body: 'Body',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({
+    slide,
+    mediaError: '[image not found: lemi.png]'
+  });
+
+  assert.equal(rendered, 'Body\n\n[image not found: lemi.png]');
 });

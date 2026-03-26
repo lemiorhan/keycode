@@ -76,6 +76,12 @@ export function renderTerminalQr(
     }
   }
 
+  const compactRendered = renderMatrix(qr.modules, 0);
+
+  if (compactRendered.width <= options.maxColumns && compactRendered.height <= options.maxRows) {
+    return compactRendered;
+  }
+
   const fallback = '[QR too large]';
 
   return {
