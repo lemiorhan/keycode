@@ -11,6 +11,7 @@ export interface Slide {
   index: number;
   raw: string;
   body: string;
+  beautify?: boolean;
   footnote?: string;
   asciiArt?: string;
   screens?: SlideScreen[];

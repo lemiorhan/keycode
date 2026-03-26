@@ -5,6 +5,29 @@ import {renderTitleAscii} from './titleArt.js';
 
 const FOOTNOTE_COLOR = '\x1b[90m';
 const ANSI_RESET = '\x1b[39m';
+const DECORATION_COLOR = '\x1b[90m';
+
+function renderBeautifyBands(size: Slide['size']): {top: string; bottom: string} {
+  const top = [
+    `${DECORATION_COLOR}        .       *        .          *       .${ANSI_RESET}`,
+    `${DECORATION_COLOR}    *      _/\\\\_        .      _/\\\\_       *${ANSI_RESET}`,
+    `${DECORATION_COLOR}       .   \\    /   *       .   \\    /   .${ANSI_RESET}`
+  ];
+  const bottom = [
+    `${DECORATION_COLOR}       .   /____\\      .  *    /____\\    .${ANSI_RESET}`,
+    `${DECORATION_COLOR}    *        .        *         .       *${ANSI_RESET}`
+  ];
+
+  if (size === 'xlarge') {
+    top.unshift(`${DECORATION_COLOR}   .         *             .             *       .${ANSI_RESET}`);
+    bottom.push(`${DECORATION_COLOR}   .        *            .            *        .${ANSI_RESET}`);
+  }
+
+  return {
+    top: top.join('\n'),
+    bottom: bottom.join('\n')
+  };
+}
 
 interface RenderSlideOptions {
   slide: Slide;
@@ -33,6 +56,12 @@ export function renderSlideTextContent(options: RenderSlideOptions): string {
 
   if (mediaError) {
     sections.push(mediaError);
+  }
+
+  if (slide.beautify) {
+    const decoration = renderBeautifyBands(slide.size);
+    sections.unshift(decoration.top);
+    sections.push(decoration.bottom);
   }
 
   return sections.join('\n\n').trimEnd();

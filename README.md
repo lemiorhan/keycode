@@ -54,6 +54,8 @@ Co-Founder at Craftgate
 
 The title is rendered automatically inside a centered ASCII box with padding and margin.
 
+Add `<beautify/>` to a slide to enable decorative ASCII ornament bands around the content. This is especially useful for title slides with a lot of empty space.
+
 ## Slide sizes
 
 Use `<size>...</size>` inside a slide to increase its visual presence.

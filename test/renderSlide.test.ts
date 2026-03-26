@@ -184,3 +184,21 @@ test('renderSlideContent appends media errors after the slide body', () => {
 
   assert.equal(rendered, 'Body\n\n[image not found: lemi.png]');
 });
+
+test('renderSlideContent adds decorative ascii bands when beautify is enabled', () => {
+  const slide: Slide = {
+    index: 9,
+    raw: '<beautify/>\n<title>Hello</title>',
+    body: '',
+    beautify: true,
+    isAsciiArt: false,
+    hasQuestion: false,
+    titleText: 'Hello',
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.match(rendered, /_\/\\\\_/);
+  assert.match(rendered, /\/____\\/);
+});

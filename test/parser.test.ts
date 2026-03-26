@@ -81,6 +81,16 @@ About the speaker
   assert.equal(deck.slides[0]?.body, 'About the speaker');
 });
 
+test('parseSlides extracts beautify tags and removes them from body content', () => {
+  const deck = parseSlides(`
+<beautify/>
+Hello
+`);
+
+  assert.equal(deck.slides[0]?.beautify, true);
+  assert.equal(deck.slides[0]?.body, 'Hello');
+});
+
 test('parseSlides extracts per-slide size directives', () => {
   const deck = parseSlides(`
 <size>xlarge</size>

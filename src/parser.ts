@@ -1,6 +1,7 @@
 import type {ParsedDeck, Slide} from './types.js';
 import {extractSlideAlign} from './alignTag.js';
 import {extractAsciiArtBlock} from './asciiArtTag.js';
+import {extractBeautifyTag} from './beautifyTag.js';
 import {extractFootnoteBlock} from './footnoteTag.js';
 import {extractImageTag} from './imageTag.js';
 import {extractQrBlock} from './qrTag.js';
@@ -33,7 +34,8 @@ export function parseSlides(source: string): ParsedDeck {
       .replace(/[ \t]+\n/g, '\n');
     const alignExtraction = extractSlideAlign(withoutQuestionToken);
     const sizeExtraction = extractSlideSize(alignExtraction.body);
-    const screenExtraction = extractScreenTags(sizeExtraction.body);
+    const beautifyExtraction = extractBeautifyTag(sizeExtraction.body);
+    const screenExtraction = extractScreenTags(beautifyExtraction.body);
     const qrExtraction = extractQrBlock(screenExtraction.body);
     const imageExtraction = extractImageTag(qrExtraction.body);
     const asciiArtExtraction = extractAsciiArtBlock(imageExtraction.body);
@@ -45,6 +47,7 @@ export function parseSlides(source: string): ParsedDeck {
       index,
       raw,
       body: titleExtraction.body,
+      beautify: beautifyExtraction.beautify,
       footnote: footnoteExtraction.footnote,
       asciiArt: asciiArtExtraction.asciiArt,
       screens: screenExtraction.screens,

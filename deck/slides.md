@@ -1,3 +1,4 @@
+<beautify/>
 <title> THE REBIRTH OF
 SOFTWARE CRAFTSMANSHIP 
 IN AI ERA </title> 
