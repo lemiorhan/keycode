@@ -1,4 +1,7 @@
-const COLOR_TAG_PATTERN = /<color\s+fg="(red|green|yellow|blue|magenta|cyan|white|gray)">([\s\S]*?)<\/color>/gi;
+export const COLOR_TAG_PATTERN =
+  /<color\s+fg="(red|green|yellow|blue|magenta|cyan|white|gray)">([\s\S]*?)<\/color>/gi;
+const COLOR_TAG_MARKUP_PATTERN =
+  /<color\s+fg="(?:red|green|yellow|blue|magenta|cyan|white|gray)">|<\/color>/gi;
 
 const ANSI_COLORS: Record<string, string> = {
   red: '\x1b[31m',
@@ -12,6 +15,10 @@ const ANSI_COLORS: Record<string, string> = {
 };
 
 const ANSI_RESET = '\x1b[39m';
+
+export function stripColorTags(content: string): string {
+  return content.replace(COLOR_TAG_MARKUP_PATTERN, '');
+}
 
 export function renderInlineColors(content: string): string {
   return content.replace(COLOR_TAG_PATTERN, (_, colorName: string, innerText: string) => {

@@ -97,6 +97,41 @@ test('renderSlideContent renders inline foreground colors with ansi escapes', ()
   assert.match(rendered, /\x1b\[36mhighlighted\x1b\[39m/);
 });
 
+test('renderSlideContent renders multi-line foreground color spans with ansi escapes', () => {
+  const slide: Slide = {
+    index: 3,
+    raw: '<color fg="cyan">First line\nSecond line</color>',
+    body: '<color fg="cyan">First line\nSecond line</color>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.includes('<color'), false);
+  assert.match(rendered, /\x1b\[36mFirst line\nSecond line\x1b\[39m/);
+});
+
+test('renderSlideContent renders color tags inside title boxes', () => {
+  const slide: Slide = {
+    index: 3,
+    raw: '<title><color fg="yellow">Hello</color>\nWorld</title>',
+    body: '',
+    isAsciiArt: false,
+    hasQuestion: false,
+    titleText: '<color fg="yellow">Hello</color>\nWorld',
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.includes('<color'), false);
+  assert.match(rendered, /\x1b\[33mHello\x1b\[39m/);
+  assert.match(rendered, /World/);
+  assert.match(rendered, /┌/);
+});
+
 test('renderSlideFootnote renders multi-line gray footnotes', () => {
   const slide: Slide = {
     index: 4,

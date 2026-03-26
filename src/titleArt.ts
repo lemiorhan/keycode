@@ -1,5 +1,6 @@
 import type {SlideSize} from './types.js';
 import stringWidth from 'string-width';
+import {renderInlineColors, stripColorTags} from './colorText.js';
 
 const TITLE_BLOCK_PATTERN = /<title>\s*([\s\S]*?)\s*<\/title>/i;
 export function extractTitleBlock(content: string): {body: string; titleText?: string} {
@@ -33,7 +34,7 @@ function titleBoxMetrics(size: SlideSize): {paddingX: number; paddingY: number; 
 }
 
 function centerRow(row: string, width: number): string {
-  const visible = stringWidth(row);
+  const visible = stringWidth(stripColorTags(row));
   const extra = Math.max(width - visible, 0);
   const left = Math.floor(extra / 2);
   const right = extra - left;
@@ -46,7 +47,7 @@ export function renderTitleAscii(titleText: string, size: SlideSize = 'normal'):
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
   const {paddingX, paddingY, outerMargin} = titleBoxMetrics(size);
-  const contentWidth = Math.max(...lines.map((line) => stringWidth(line)), 0);
+  const contentWidth = Math.max(...lines.map((line) => stringWidth(stripColorTags(line))), 0);
   const totalInnerWidth = contentWidth + paddingX * 2;
   const top = `┌${'─'.repeat(totalInnerWidth)}┐`;
   const empty = `│${' '.repeat(totalInnerWidth)}│`;
@@ -62,5 +63,5 @@ export function renderTitleAscii(titleText: string, size: SlideSize = 'normal'):
     ...Array.from({length: outerMargin}, () => '')
   ];
 
-  return box.join('\n').replace(/\n+$/g, '');
+  return renderInlineColors(box.join('\n').replace(/\n+$/g, ''));
 }

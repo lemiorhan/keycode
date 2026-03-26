@@ -1,9 +1,9 @@
 <beautify/>
 <title> THE REBIRTH OF
-SOFTWARE CRAFTSMANSHIP 
+<color fg="yellow">SOFTWARE CRAFTSMANSHIP</color>
 IN AI ERA </title> 
-Lemi Orhan Ergin 
-Co-Founder @ Craftgate 
+Lemi Orhan Ergin
+<color fg="gray">Co-Founder @ Craftgate</color> 
 
 --- 
 
