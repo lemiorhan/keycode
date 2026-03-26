@@ -121,7 +121,7 @@ Centered by default
 
 test('parseSlides extracts qr blocks and removes them from body content', () => {
   const deck = parseSlides(`
-<qr width=45%>
+<qr width=45% colors=white-on-transparent>
 https://craftgate.io/talk
 </qr>
 Scan this to follow along
@@ -129,6 +129,7 @@ Scan this to follow along
 
   assert.equal(deck.slides[0]?.qrText, 'https://craftgate.io/talk');
   assert.equal(deck.slides[0]?.qrWidthPercent, 45);
+  assert.equal(deck.slides[0]?.qrColors, 'white-on-transparent');
   assert.equal(deck.slides[0]?.body, 'Scan this to follow along');
 });
 
@@ -201,6 +202,7 @@ https://example.com
 `);
 
   assert.equal(defaultDeck.slides[0]?.qrWidthPercent, 30);
+  assert.equal(defaultDeck.slides[0]?.qrColors, 'black-on-white');
   assert.equal(clampedDeck.slides[0]?.qrWidthPercent, 90);
 });
 

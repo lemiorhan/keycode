@@ -24,7 +24,7 @@ Meet Lemi
 * speakerdeck 
 * linkedin 
 </p>
-<qr width=20%>https://lemiorhanergin.com</qr> 
+<qr colors=white-on-transparent width=20%>https://lemiorhanergin.com</qr> 
 
 --- 
 
@@ -32,7 +32,7 @@ Meet Lemi
 "People without developer background are sometimes shipping AI-generated prototypes faster than experienced engineers. I just had a "<color fg="yellow">reminder conversation</color>" last Friday that triggered this post." 
 - Lemi Orhan Ergin</p>
 
-<qr width=20%>https://dev.to/the_nortern_dev/the-illusion-of-the-human-touch-5b0</qr>
+<qr colors=white-on-transparent width=20%>https://dev.to/the_nortern_dev/the-illusion-of-the-human-touch-5b0</qr>
 
 <footnote>
 lemi webpage: https://lemiorhanergin.com

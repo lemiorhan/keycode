@@ -56,6 +56,7 @@ export function parseSlides(source: string): ParsedDeck {
       titleText: titleExtraction.titleText,
       qrText: qrExtraction.qrText,
       qrWidthPercent: qrExtraction.qrWidthPercent,
+      qrColors: qrExtraction.qrColors,
       imagePath: imageExtraction.imagePath,
       imageWidthPercent: imageExtraction.imageWidthPercent,
       imageBackgroundColor: imageExtraction.imageBackgroundColor,

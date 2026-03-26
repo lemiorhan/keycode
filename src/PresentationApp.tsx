@@ -179,7 +179,7 @@ export function PresentationApp({slides, deckDirectory}: PresentationAppProps): 
         });
     } else if (currentSlide?.qrText) {
       setMediaError(undefined);
-      void ensureQrImage(deckDirectory, currentSlide.qrText)
+      void ensureQrImage(deckDirectory, currentSlide.qrText, currentSlide.qrColors)
         .then((imagePath) => {
           if (!cancelled) {
             viewer.open(imagePath, {
@@ -208,6 +208,7 @@ export function PresentationApp({slides, deckDirectory}: PresentationAppProps): 
     currentSlide?.imageBackgroundColor,
     currentSlide?.screens,
     currentSlide?.qrText,
+    currentSlide?.qrColors,
     currentSlide?.qrWidthPercent,
     deckDirectory
   ]);

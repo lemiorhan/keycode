@@ -9,6 +9,7 @@ import {
   overlayFrameInPane,
   overlayTopLeft,
   paneBounds,
+  qrImageFilenameForColors,
   qrImageFilename,
   resolveDeckImagePath
 } from '../src/externalQr.js';
@@ -17,6 +18,17 @@ test('qrImageFilename is deterministic for the same payload', () => {
   const payload = 'https://example.com/talk';
 
   assert.equal(qrImageFilename(payload), qrImageFilename(payload));
+});
+
+test('qrImageFilenameForColors includes the color mode in the cached filename', () => {
+  const payload = 'https://example.com/talk';
+
+  assert.match(qrImageFilenameForColors(payload, 'black-on-white'), /black-on-white/);
+  assert.match(qrImageFilenameForColors(payload, 'white-on-black'), /white-on-black/);
+  assert.match(
+    qrImageFilenameForColors(payload, 'white-on-transparent'),
+    /white-on-transparent/
+  );
 });
 
 test('ensureQrImage generates a png when missing', async () => {

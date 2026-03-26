@@ -164,7 +164,7 @@ Speaker notes and content go on the other side.
 
 ## QR blocks
 
-Use `<qr>...</qr>` or `<qr width=30%>...</qr>` to place a QR code on a slide.
+Use `<qr>...</qr>` or `<qr width=30% colors=black-on-white>...</qr>` to place a QR code on a slide.
 
 Example:
 
@@ -173,7 +173,7 @@ Example:
 Join the live notes
 </title>
 
-<qr width=30%>
+<qr width=30% colors=white-on-transparent>
 https://example.com/talk
 </qr>
 
@@ -186,6 +186,7 @@ Behavior:
 - The overlay is positioned near the bottom-right of the Terminal window when possible.
 - The overlay is designed to stay visible without taking focus away from Terminal.
 - `width` controls the overlay width as a percentage of the Terminal window width.
+- `colors` controls the QR image color mode. Supported values are `black-on-white`, `white-on-black`, and `white-on-transparent`. `black-on-white` is the default. `white-on-transparent` renders only the white QR modules and leaves the background transparent so the terminal background shows through.
 - The PNG is cached in the deck folder using a deterministic filename derived from the QR content.
 - Existing QR PNG files are reused if they already exist.
 - The terminal slide itself stays text-only and defaults to left alignment unless you override it.

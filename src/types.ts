@@ -1,6 +1,7 @@
 export type SlideSize = 'normal' | 'large' | 'xlarge';
 export type SlideAlign = 'left' | 'center' | 'right';
 export type SlideSide = 'left' | 'right';
+export type QrColors = 'black-on-white' | 'white-on-black' | 'white-on-transparent';
 
 export interface SlideScreen {
   widthPercent: number;
@@ -20,6 +21,7 @@ export interface Slide {
   titleText?: string;
   qrText?: string;
   qrWidthPercent?: number;
+  qrColors?: QrColors;
   imagePath?: string;
   imageWidthPercent?: number;
   imageBackgroundColor?: string;

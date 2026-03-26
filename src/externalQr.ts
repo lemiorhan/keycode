@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 import QRCode from 'qrcode';
-import type {SlideAlign, SlideScreen, SlideSide} from './types.js';
+import type {QrColors, SlideAlign, SlideScreen, SlideSide} from './types.js';
 
 const EXTERNAL_QR_WIDTH = 360;
 const OVERLAY_WINDOW_WIDTH = 420;
@@ -226,12 +226,20 @@ function overlayScriptPath(): string {
 }
 
 export function qrImageFilename(payload: string): string {
-  const hash = createHash('sha1').update(payload).digest('hex').slice(0, 10);
-  return `${slugifyPayload(payload)}-${hash}-w${EXTERNAL_QR_WIDTH}.png`;
+  return qrImageFilenameForColors(payload, 'black-on-white');
 }
 
-export async function ensureQrImage(deckDirectory: string, payload: string): Promise<string> {
-  const imagePath = join(deckDirectory, qrImageFilename(payload));
+export function qrImageFilenameForColors(payload: string, colors: QrColors): string {
+  const hash = createHash('sha1').update(payload).digest('hex').slice(0, 10);
+  return `${slugifyPayload(payload)}-${hash}-${colors}-w${EXTERNAL_QR_WIDTH}.png`;
+}
+
+export async function ensureQrImage(
+  deckDirectory: string,
+  payload: string,
+  colors: QrColors = 'black-on-white'
+): Promise<string> {
+  const imagePath = join(deckDirectory, qrImageFilenameForColors(payload, colors));
 
   try {
     await access(imagePath, constants.F_OK);
@@ -248,7 +256,22 @@ export async function ensureQrImage(deckDirectory: string, payload: string): Pro
     errorCorrectionLevel: 'M',
     margin: 4,
     width: EXTERNAL_QR_WIDTH,
-    type: 'png'
+    type: 'png',
+    color:
+      colors === 'white-on-black'
+        ? {
+            dark: '#FFFFFFFF',
+            light: '#000000FF'
+          }
+        : colors === 'white-on-transparent'
+          ? {
+              dark: '#FFFFFFFF',
+              light: '#00000000'
+            }
+        : {
+            dark: '#000000',
+            light: '#FFFFFFFF'
+          }
   });
 
   return imagePath;
