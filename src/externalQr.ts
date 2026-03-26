@@ -1,5 +1,5 @@
 import {constants} from 'node:fs';
-import {access, stat} from 'node:fs/promises';
+import {access, mkdir, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync, spawn, type ChildProcess} from 'node:child_process';
 import {existsSync} from 'node:fs';
@@ -73,7 +73,7 @@ export function overlayTopLeft(bounds: WindowBounds): {x: number; top: number} {
 }
 
 export function resolveDeckImagePath(deckDirectory: string, imagePath: string): string {
-  return imagePath.startsWith('/') ? imagePath : join(deckDirectory, imagePath);
+  return imagePath.startsWith('/') ? imagePath : join(deckDirectory, 'images', imagePath);
 }
 
 interface OverlayFrameOptions {
@@ -239,7 +239,9 @@ export async function ensureQrImage(
   payload: string,
   colors: QrColors = 'black-on-white'
 ): Promise<string> {
-  const imagePath = join(deckDirectory, qrImageFilenameForColors(payload, colors));
+  const imagesDirectory = join(deckDirectory, 'images');
+  await mkdir(imagesDirectory, {recursive: true});
+  const imagePath = join(imagesDirectory, qrImageFilenameForColors(payload, colors));
 
   try {
     await access(imagePath, constants.F_OK);

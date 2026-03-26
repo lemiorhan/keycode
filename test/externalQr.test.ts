@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp, stat, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, stat, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {
@@ -37,12 +37,15 @@ test('ensureQrImage generates a png when missing', async () => {
   const fileStat = await stat(imagePath);
 
   assert.equal(imagePath.endsWith('.png'), true);
+  assert.equal(imagePath.includes('/images/'), true);
   assert.equal(fileStat.size > 0, true);
 });
 
 test('ensureQrImage reuses an existing file if present', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'keycode-qr-'));
-  const imagePath = join(directory, qrImageFilename('https://example.com/talk'));
+  const imagesDirectory = join(directory, 'images');
+  await mkdir(imagesDirectory, {recursive: true});
+  const imagePath = join(imagesDirectory, qrImageFilename('https://example.com/talk'));
   await writeFile(imagePath, 'existing');
   const beforeStat = await stat(imagePath);
 
@@ -135,9 +138,9 @@ test('overlayFrameInPane centers an image horizontally inside the selected pane'
   assert.equal(frame.top, 335);
 });
 
-test('resolveDeckImagePath resolves relative image paths from the deck folder', () => {
+test('resolveDeckImagePath resolves relative image paths from the deck images folder', () => {
   assert.equal(
-    resolveDeckImagePath('/tmp/deck', 'images/speaker.png'),
+    resolveDeckImagePath('/tmp/deck', 'speaker.png'),
     '/tmp/deck/images/speaker.png'
   );
   assert.equal(

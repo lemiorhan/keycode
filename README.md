@@ -187,7 +187,7 @@ Behavior:
 - The overlay is designed to stay visible without taking focus away from Terminal.
 - `width` controls the overlay width as a percentage of the Terminal window width.
 - `colors` controls the QR image color mode. Supported values are `black-on-white`, `white-on-black`, and `white-on-transparent`. `black-on-white` is the default. `white-on-transparent` renders only the white QR modules and leaves the background transparent so the terminal background shows through.
-- The PNG is cached in the deck folder using a deterministic filename derived from the QR content.
+- The PNG is cached in the deck's `images/` folder using a deterministic filename derived from the QR content.
 - Existing QR PNG files are reused if they already exist.
 - The terminal slide itself stays text-only and defaults to left alignment unless you override it.
 - QR slides skip the scramble transition so the code stays scannable.
@@ -210,7 +210,7 @@ Co-Founder at Craftgate
 
 Properties:
 
-- `path`: relative to the deck folder, or an absolute filesystem path
+- `path`: relative to the deck's `images/` folder, or an absolute filesystem path
 - `width`: overlay width as a percentage of the Terminal window width
 - `bg-color`: background color for the native overlay panel, for example `#111111`, `black`, `white`, or `gray`
 
@@ -219,7 +219,7 @@ Behavior:
 - The image opens in the native overlay window above Terminal.
 - The image is shown in the first screen pane and horizontally centered there.
 - Height is calculated automatically from the image aspect ratio.
-- Relative image paths are resolved from the folder containing `slides.md`.
+- Relative image paths are resolved from the deck's `images/` folder.
 - The overlay closes automatically when you leave the slide or quit.
 
 ## Controls
