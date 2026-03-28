@@ -1,7 +1,8 @@
 import type {QuestionState, Slide} from './types.js';
 import {renderInlineColors} from './colorText.js';
 import {renderParagraphBlocks} from './paragraphTag.js';
-import {renderTitleAscii} from './titleArt.js';
+import {applyRevealLines} from './revealLines.js';
+import {renderHeaderAscii, renderTitleAscii} from './titleArt.js';
 
 const FOOTNOTE_COLOR = '\x1b[90m';
 const ANSI_RESET = '\x1b[39m';
@@ -34,10 +35,11 @@ interface RenderSlideOptions {
   answer?: QuestionState;
   questionInput?: string;
   mediaError?: string;
+  revealCount?: number;
 }
 
 export function renderSlideTextContent(options: RenderSlideOptions): string {
-  const {slide, answer, questionInput = '', mediaError} = options;
+  const {slide, answer, questionInput = '', mediaError, revealCount = 0} = options;
   const sections: string[] = [];
 
   if (slide.titleText) {
@@ -46,7 +48,8 @@ export function renderSlideTextContent(options: RenderSlideOptions): string {
 
   if (slide.body.trim().length > 0) {
     const spacing = slide.size === 'normal' ? '\n' : '\n\n';
-    const bodyWithParagraphs = renderParagraphBlocks(slide.body.trimEnd());
+    const revealedBody = applyRevealLines(slide.body.trimEnd(), revealCount);
+    const bodyWithParagraphs = renderParagraphBlocks(revealedBody);
     sections.push(renderInlineColors(bodyWithParagraphs.split('\n').join(spacing)));
   }
 
@@ -64,7 +67,15 @@ export function renderSlideTextContent(options: RenderSlideOptions): string {
     sections.push(decoration.bottom);
   }
 
-  return sections.join('\n\n').trimEnd();
+  return sections.join('\n\n').replace(/\n+$/u, '');
+}
+
+export function renderSlideHeader(slide: Slide): string | undefined {
+  if (!slide.headerText?.trim()) {
+    return undefined;
+  }
+
+  return renderHeaderAscii(slide.headerText, slide.headerColor);
 }
 
 export function renderSlideFootnote(slide: Slide): string | undefined {

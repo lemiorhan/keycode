@@ -7,7 +7,7 @@ import {extractImageTag} from './imageTag.js';
 import {extractQrBlock} from './qrTag.js';
 import {extractScreenTags} from './screenTag.js';
 import {extractSlideSize} from './sizeTag.js';
-import {extractTitleBlock} from './titleArt.js';
+import {extractHeaderBlock, extractTitleBlock} from './titleArt.js';
 
 const SLIDE_SEPARATOR = /^---\s*$/m;
 const QUESTION_TOKEN = '[QUESTION]';
@@ -40,7 +40,8 @@ export function parseSlides(source: string): ParsedDeck {
     const imageExtraction = extractImageTag(qrExtraction.body);
     const asciiArtExtraction = extractAsciiArtBlock(imageExtraction.body);
     const footnoteExtraction = extractFootnoteBlock(asciiArtExtraction.body);
-    const titleExtraction = extractTitleBlock(footnoteExtraction.body);
+    const headerExtraction = extractHeaderBlock(footnoteExtraction.body);
+    const titleExtraction = extractTitleBlock(headerExtraction.body);
     const isAsciiArt = index === 0 || index === all.length - 1;
 
     return {
@@ -53,6 +54,8 @@ export function parseSlides(source: string): ParsedDeck {
       screens: screenExtraction.screens,
       isAsciiArt,
       hasQuestion,
+      headerText: headerExtraction.headerText,
+      headerColor: headerExtraction.headerColor,
       titleText: titleExtraction.titleText,
       qrText: qrExtraction.qrText,
       qrWidthPercent: qrExtraction.qrWidthPercent,

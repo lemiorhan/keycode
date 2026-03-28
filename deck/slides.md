@@ -28,6 +28,8 @@ Meet Lemi
 
 --- 
 
+<header>People without developer background are sometimes shipping</header>
+
 <p align=left max-width=80>
 "People without developer background are sometimes shipping AI-generated prototypes faster than experienced engineers. I just had a "<color fg="yellow">reminder conversation</color>" last Friday that triggered this post." 
 - Lemi Orhan Ergin</p>

@@ -2,6 +2,7 @@ export type SlideSize = 'normal' | 'large' | 'xlarge';
 export type SlideAlign = 'left' | 'center' | 'right';
 export type SlideSide = 'left' | 'right';
 export type QrColors = 'black-on-white' | 'white-on-black' | 'white-on-transparent';
+export type NamedColor = 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white' | 'gray';
 
 export interface SlideScreen {
   widthPercent: number;
@@ -18,6 +19,8 @@ export interface Slide {
   screens?: SlideScreen[];
   isAsciiArt: boolean;
   hasQuestion: boolean;
+  headerText?: string;
+  headerColor?: NamedColor;
   titleText?: string;
   qrText?: string;
   qrWidthPercent?: number;

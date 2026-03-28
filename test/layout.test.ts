@@ -43,6 +43,31 @@ test('centerTextBlock can right-align lines inside a centered block', () => {
   assert.equal(output.split('\n')[2], '        x');
 });
 
+test('centerTextBlock keeps left-aligned wrapped paragraph lines on the same left edge', () => {
+  const output = centerTextBlock('Alpha beta     \ngamma delta    \nepsilon zeta█', {
+    rows: 5,
+    columns: 30,
+    align: 'center'
+  });
+  const lines = output.split('\n').filter((line) => line.length > 0);
+  const bodyLines = lines.slice(0, 3);
+  const leftPads = bodyLines.map((line) => line.match(/^ */)?.[0].length ?? 0);
+
+  assert.equal(new Set(leftPads).size, 1);
+});
+
+test('centerTextBlock keeps ordinary centered text centered even with a cursor placeholder', () => {
+  const output = centerTextBlock('Centered title\nSecond line ', {
+    rows: 4,
+    columns: 30,
+    align: 'center'
+  });
+  const lines = output.split('\n').filter((line) => line.length > 0);
+  const leftPads = lines.slice(0, 2).map((line) => line.match(/^ */)?.[0].length ?? 0);
+
+  assert.notEqual(leftPads[0], leftPads[1]);
+});
+
 test('composeBottomRightOverlayLayout anchors overlay bottom-right and keeps text on the left', () => {
   const output = composeBottomRightOverlayLayout('Hello', 'XX\nXX', {
     rows: 6,
@@ -77,6 +102,20 @@ test('centerTextBlock places footnotes at the bottom with a spacer line', () => 
   assert.equal(lines[1], '   Hello');
   assert.equal(lines[4], '');
   assert.equal(lines[5], 'footnote');
+});
+
+test('centerTextBlock places header content at the top and centers body below it', () => {
+  const output = centerTextBlock('Hello', {
+    rows: 8,
+    columns: 20,
+    headerContent: 'HEADER'
+  });
+  const lines = output.split('\n');
+
+  assert.equal(lines[0], '');
+  assert.equal(lines[1], '       HEADER');
+  assert.equal(lines[2], '');
+  assert.equal(lines.some((line, index) => index >= 3 && line.includes('Hello')), true);
 });
 
 test('composeTwoScreenLayout places media in the first screen and text in the second', () => {
@@ -165,4 +204,22 @@ test('composeTwoScreenLayout keeps footnote at bottom', () => {
 
   assert.equal(lines.some((line, index) => index < 4 && line.startsWith('   XX')), true);
   assert.equal(lines[5], 'foot');
+});
+
+test('composeTwoScreenLayout places header content at the top before split panes', () => {
+  const output = composeTwoScreenLayout('XX', 'Hello', {
+    rows: 6,
+    columns: 20,
+    headerContent: 'HEADER',
+    screens: [
+      {widthPercent: 40, contentAlign: 'center'},
+      {widthPercent: 60, contentAlign: 'left'}
+    ]
+  });
+  const lines = output.split('\n');
+
+  assert.equal(lines[0], '');
+  assert.equal(lines[1], '       HEADER');
+  assert.equal(lines[2], '');
+  assert.equal(lines.some((line, index) => index >= 3 && line.includes('Hello')), true);
 });

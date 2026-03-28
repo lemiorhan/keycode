@@ -7,6 +7,7 @@ export interface RenderOptions {
   hintLine?: string;
   align?: SlideAlign;
   preferCompactLeftPane?: boolean;
+  headerContent?: string;
   footerContent?: string;
 }
 
@@ -23,8 +24,18 @@ function cropLine(line: string, columns: number): string {
 
   let width = 0;
   let output = '';
+  let index = 0;
 
-  for (const char of line) {
+  while (index < line.length) {
+    const ansiMatch = line.slice(index).match(/^\x1B\[[0-9;]*m/);
+
+    if (ansiMatch) {
+      output += ansiMatch[0];
+      index += ansiMatch[0].length;
+      continue;
+    }
+
+    const char = line[index] ?? '';
     const charWidth = stringWidth(char);
 
     if (width + charWidth > columns) {
@@ -33,13 +44,25 @@ function cropLine(line: string, columns: number): string {
 
     output += char;
     width += charWidth;
+    index += 1;
   }
 
   return output;
 }
 
 function shouldCenterAsBlock(lines: string[]): boolean {
-  return lines.some((line) => line.trimStart().startsWith('* '));
+  return lines.some((line) => line.trimStart().startsWith('* ')) || hasPreAlignedPadding(lines);
+}
+
+function hasPreAlignedPadding(lines: string[]): boolean {
+  const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+  const leadingIndented = nonEmptyLines.some((line) => {
+    const trimmedStart = line.trimStart();
+    return line !== line.trimStart() && !trimmedStart.startsWith('* ');
+  });
+  const trailingPaddedCount = nonEmptyLines.filter((line) => line !== line.trimEnd()).length;
+
+  return leadingIndented || trailingPaddedCount >= 2;
 }
 
 function linePad(targetWidth: number, lineWidth: number, align: SlideAlign): number {
@@ -58,6 +81,7 @@ function centerLines(lines: string[], rows: number, columns: number, align: Slid
   const croppedLines = lines.map((line) => cropLine(line, columns));
   const visibleLines = croppedLines.slice(0, rows);
   const topPad = Math.max(Math.floor((rows - visibleLines.length) / 2), 0);
+  const paddedBlock = hasPreAlignedPadding(visibleLines);
   const useBlockAlignment = align !== 'center' || shouldCenterAsBlock(visibleLines);
   const blockWidth = useBlockAlignment
     ? Math.max(...visibleLines.map((line) => visibleWidth(line)), 0)
@@ -66,7 +90,8 @@ function centerLines(lines: string[], rows: number, columns: number, align: Slid
     const lineWidth = visibleWidth(line);
     const targetWidth = useBlockAlignment ? blockWidth : lineWidth;
     const outerLeftPad = Math.max(Math.floor((columns - targetWidth) / 2), 0);
-    const innerLeftPad = useBlockAlignment ? linePad(targetWidth, lineWidth, align) : 0;
+    const innerLeftPad =
+      useBlockAlignment && !paddedBlock ? linePad(targetWidth, lineWidth, align) : 0;
     return `${' '.repeat(outerLeftPad + innerLeftPad)}${line}`;
   });
 
@@ -108,18 +133,33 @@ function alignLinesInPane(lines: string[], rows: number, paneWidth: number, alig
   return frameLines;
 }
 
+function centerHeaderLines(headerContent: string, columns: number): string[] {
+  return headerContent
+    .split('\n')
+    .map((line) => cropLine(line, columns))
+    .map((line) => `${' '.repeat(Math.max(Math.floor((columns - visibleWidth(line)) / 2), 0))}${line}`);
+}
+
 export function centerTextBlock(content: string, options: RenderOptions): string {
   const rows = Math.max(options.rows, 1);
   const columns = Math.max(options.columns, 1);
   const hintLine = options.hintLine ?? '';
   const align = options.align ?? 'center';
+  const headerContent = options.headerContent ?? '';
   const footerContent = options.footerContent ?? '';
   const reservedHintRows = hintLine ? 1 : 0;
+  const headerLines = headerContent ? centerHeaderLines(headerContent, columns) : [];
+  const reservedHeaderRows = headerLines.length > 0 ? headerLines.length + 2 : 0;
   const footerLines = footerContent ? footerContent.split('\n').map((line) => cropLine(line, columns)) : [];
   const reservedFooterRows = footerLines.length > 0 ? footerLines.length + 1 : 0;
-  const usableRows = Math.max(rows - reservedHintRows - reservedFooterRows, 1);
+  const usableRows = Math.max(rows - reservedHintRows - reservedHeaderRows - reservedFooterRows, 1);
   const rawLines = content.split('\n');
-  const frameLines = centerLines(rawLines, usableRows, columns, align);
+  const frameLines = [
+    ...(headerLines.length > 0 ? [''] : []),
+    ...headerLines,
+    ...(headerLines.length > 0 ? [''] : []),
+    ...centerLines(rawLines, usableRows, columns, align)
+  ];
 
   if (footerLines.length > 0) {
     frameLines.push('');
@@ -235,10 +275,13 @@ export function composeTwoScreenLayout(
 ): string {
   const rows = Math.max(options.rows, 1);
   const columns = Math.max(options.columns, 1);
+  const headerContent = options.headerContent ?? '';
+  const headerLines = headerContent ? centerHeaderLines(headerContent, columns) : [];
+  const reservedHeaderRows = headerLines.length > 0 ? headerLines.length + 2 : 0;
   const footerContent = options.footerContent ?? '';
   const footerLines = footerContent ? footerContent.split('\n').map((line) => cropLine(line, columns)) : [];
   const reservedFooterRows = footerLines.length > 0 ? footerLines.length + 1 : 0;
-  const usableRows = Math.max(rows - reservedFooterRows, 1);
+  const usableRows = Math.max(rows - reservedHeaderRows - reservedFooterRows, 1);
   const [leftScreen, rightScreen] = options.screens;
   const leftPaneWidth = Math.max(Math.floor(columns * (leftScreen.widthPercent / 100)), 1);
   const rightPaneWidth = Math.max(columns - leftPaneWidth, 1);
@@ -254,7 +297,11 @@ export function composeTwoScreenLayout(
     rightPaneWidth,
     rightScreen.contentAlign
   );
-  const frameLines: string[] = [];
+  const frameLines: string[] = [
+    ...(headerLines.length > 0 ? [''] : []),
+    ...headerLines,
+    ...(headerLines.length > 0 ? [''] : [])
+  ];
 
   for (let row = 0; row < usableRows; row += 1) {
     const leftSegment = (leftContentLines[row] ?? '').padEnd(leftPaneWidth, ' ');

@@ -219,6 +219,19 @@ Co-Founder at Craftgate
   assert.equal(deck.slides[0]?.body, 'Lemi Orhan Ergin\nCo-Founder at Craftgate');
 });
 
+test('parseSlides extracts <header> block text and keeps the rest of slide content plain', () => {
+  const deck = parseSlides(`
+<header color=cyan>
+Architecture
+</header>
+Body copy
+`);
+
+  assert.equal(deck.slides[0]?.headerText, 'Architecture');
+  assert.equal(deck.slides[0]?.headerColor, 'cyan');
+  assert.equal(deck.slides[0]?.body, 'Body copy');
+});
+
 test('parseSlides supports multi-line <title> blocks', () => {
   const deck = parseSlides(`
 <title>

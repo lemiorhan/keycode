@@ -27,6 +27,24 @@ my-talk/
 
 If you want to run `present` without `./`, add this repo to your `PATH`, symlink the script into a directory on your `PATH`, or install the package globally.
 
+## Create a Deck
+
+Use [init-deck](/Users/lemiorhan/CascadeProjects/keycode/init-deck) to scaffold a new slide deck folder.
+
+```bash
+./init-deck my-talk
+```
+
+This creates:
+
+```text
+my-talk/
+  slides.md
+  images/
+```
+
+The generated `slides.md` includes a starter title slide, sample headers, and basic content you can edit.
+
 ## Deck format
 
 Use a single UTF-8 Markdown file named `slides.md`.
@@ -34,6 +52,7 @@ Use a single UTF-8 Markdown file named `slides.md`.
 - Separate slides with `---` on its own line.
 - Multi-line content is supported.
 - `[QUESTION]` anywhere in a slide pauses on that slide until input is entered and `Enter` is pressed.
+- Lines that start with `=>` are revealed one by one from top to bottom as you press next, and hidden in reverse order as you press previous.
 - The first and last slides preserve spacing well for ASCII-art-heavy content.
 
 ## Title blocks
@@ -55,6 +74,22 @@ Co-Founder at Craftgate
 The title is rendered automatically inside a centered ASCII box with padding and margin.
 
 Add `<beautify/>` to a slide to enable decorative ASCII ornament bands around the content. This is especially useful for title slides with a lot of empty space.
+
+## Headers
+
+Use `<header>...</header>` inside a slide to show a per-slide heading pinned to the top of the terminal.
+
+Example:
+
+```md
+<header color=cyan>
+Architecture
+</header>
+
+Main slide content goes here.
+```
+
+The header is rendered as a centered ASCII title banner at the top, while the rest of the slide is laid out beneath it. You can set `color` to one of `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, or `gray`.
 
 ## Slide sizes
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {renderSlideContent, renderSlideFootnote} from '../src/renderSlide.js';
+import {renderSlideContent, renderSlideFootnote, renderSlideHeader} from '../src/renderSlide.js';
 import type {Slide} from '../src/types.js';
 
 test('renderSlideContent renders title text inside a box and keeps body content', () => {
@@ -97,6 +97,30 @@ test('renderSlideContent renders inline foreground colors with ansi escapes', ()
   assert.match(rendered, /\x1b\[36mhighlighted\x1b\[39m/);
 });
 
+test('renderSlideContent hides and reveals lines that start with =>', () => {
+  const slide: Slide = {
+    index: 3,
+    raw: 'Always visible\n=> First reveal\n=> Second reveal\nDone',
+    body: 'Always visible\n=> First reveal\n=> Second reveal\nDone',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const hidden = renderSlideContent({slide, revealCount: 0});
+  const first = renderSlideContent({slide, revealCount: 1});
+  const second = renderSlideContent({slide, revealCount: 2});
+
+  assert.equal(hidden.includes('First reveal'), false);
+  assert.equal(hidden.includes('Second reveal'), false);
+  assert.match(first, /\x1b\[90mAlways visible\x1b\[39m/);
+  assert.match(first, /First reveal/);
+  assert.equal(first.includes('Second reveal'), false);
+  assert.match(first, /\x1b\[90mDone\x1b\[39m/);
+  assert.match(second, /\x1b\[90mFirst reveal\x1b\[39m/);
+  assert.match(second, /Second reveal/);
+});
+
 test('renderSlideContent renders multi-line foreground color spans with ansi escapes', () => {
   const slide: Slide = {
     index: 3,
@@ -130,6 +154,26 @@ test('renderSlideContent renders color tags inside title boxes', () => {
   assert.match(rendered, /\x1b\[33mHello\x1b\[39m/);
   assert.match(rendered, /World/);
   assert.match(rendered, /┌/);
+});
+
+test('renderSlideHeader renders a banner line instead of a box', () => {
+  const slide: Slide = {
+    index: 4,
+    raw: '<header color=cyan>Architecture</header>',
+    body: '',
+    headerText: 'Architecture',
+    headerColor: 'cyan',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideHeader(slide);
+
+  assert.equal(rendered?.includes('┌') ?? false, false);
+  assert.match(rendered ?? '', /\.=~+/);
+  assert.match(rendered ?? '', /ARCHITECTURE/);
+  assert.match(rendered ?? '', /\x1b\[36mARCHITECTURE\x1b\[39m/);
 });
 
 test('renderSlideFootnote renders multi-line gray footnotes', () => {
