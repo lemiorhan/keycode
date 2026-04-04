@@ -1,10 +1,10 @@
 {
-  "name": "terminal-present",
+  "name": "keycode",
   "version": "0.1.0",
   "description": "Terminal-based presentation app for macOS Terminal.app",
   "type": "module",
   "bin": {
-    "present": "./dist/src/cli.js"
+    "keycode": "./dist/src/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

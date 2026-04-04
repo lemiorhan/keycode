@@ -1,27 +1,77 @@
-const REVEAL_LINE_PATTERN = /^(\s*)=>(?:\s?)(.*)$/;
+const REVEAL_LINE_PATTERN = /^(\s*)(?<!=)=>(?:\s?)(.*)$/;
+const GROUP_REVEAL_LINE_PATTERN = /^(\s*)==>(?:\s?)(.*)$/;
 const ANSI_GRAY = '\x1b[90m';
 const ANSI_RESET = '\x1b[39m';
 const STRUCTURAL_TAG_LINE_PATTERN = /^\s*<[^>]+>\s*$/;
 
+function isRevealLine(line: string): boolean {
+  return GROUP_REVEAL_LINE_PATTERN.test(line) || REVEAL_LINE_PATTERN.test(line);
+}
+
+function isGroupRevealLine(line: string): boolean {
+  return GROUP_REVEAL_LINE_PATTERN.test(line);
+}
+
 export function countRevealLines(content: string): number {
-  return content
-    .split('\n')
-    .filter((line) => REVEAL_LINE_PATTERN.test(line))
-    .length;
+  const lines = content.split('\n');
+  let count = 0;
+  let inGroup = false;
+
+  for (const line of lines) {
+    if (isGroupRevealLine(line)) {
+      if (!inGroup) {
+        count += 1;
+        inGroup = true;
+      }
+    } else {
+      inGroup = false;
+
+      if (REVEAL_LINE_PATTERN.test(line)) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
 }
 
 export function applyRevealLines(content: string, revealCount: number): string {
-  const totalRevealLines = countRevealLines(content);
-  let remaining = Math.max(revealCount, 0);
-  let revealedIndex = 0;
-  const dimVisibleContext = totalRevealLines > 0 && revealCount > 0;
+  const totalRevealSteps = countRevealLines(content);
+  const dimVisibleContext = totalRevealSteps > 0 && revealCount > 0;
+  const lines = content.split('\n');
 
-  return content
-    .split('\n')
-    .flatMap((line) => {
-      const match = line.match(REVEAL_LINE_PATTERN);
+  // Assign each reveal line a step index (consecutive ==> lines share the same step)
+  const stepAssignments = new Map<number, number>();
+  let stepIndex = 0;
+  let inGroup = false;
 
-      if (!match) {
+  for (let i = 0; i < lines.length; i++) {
+    if (isGroupRevealLine(lines[i])) {
+      if (!inGroup) {
+        inGroup = true;
+      }
+
+      stepAssignments.set(i, stepIndex);
+    } else {
+      if (inGroup) {
+        stepIndex += 1;
+        inGroup = false;
+      }
+
+      if (REVEAL_LINE_PATTERN.test(lines[i])) {
+        stepAssignments.set(i, stepIndex);
+        stepIndex += 1;
+      }
+    }
+  }
+
+  const lastRevealedStep = revealCount - 1;
+
+  return lines
+    .flatMap((line, i) => {
+      const step = stepAssignments.get(i);
+
+      if (step === undefined) {
         if (STRUCTURAL_TAG_LINE_PATTERN.test(line)) {
           return [line];
         }
@@ -33,18 +83,18 @@ export function applyRevealLines(content: string, revealCount: number): string {
         return [`${ANSI_GRAY}${line}${ANSI_RESET}`];
       }
 
-      if (remaining <= 0) {
+      if (step >= revealCount) {
         return [];
       }
 
-      remaining -= 1;
-      const leadingIndent = match[1] ?? '';
-      const lineContent = match[2] ?? '';
+      const groupMatch = line.match(GROUP_REVEAL_LINE_PATTERN);
+      const singleMatch = !groupMatch ? line.match(REVEAL_LINE_PATTERN) : null;
+      const leadingIndent = (groupMatch ?? singleMatch)?.[1] ?? '';
+      const lineContent = (groupMatch ?? singleMatch)?.[2] ?? '';
       const rendered =
-        revealedIndex < revealCount - 1
+        step < lastRevealedStep
           ? `${ANSI_GRAY}${leadingIndent}${lineContent}${ANSI_RESET}`
           : `${leadingIndent}${lineContent}`;
-      revealedIndex += 1;
       return [rendered];
     })
     .join('\n');

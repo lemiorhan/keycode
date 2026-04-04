@@ -42,6 +42,117 @@ test('renderSlideContent appends question input after title/body content', () =>
 
   assert.match(rendered, /What now\?/);
   assert.match(rendered, /Answer: Ship it/);
+  assert.equal(rendered.includes('What now?\n\nAnswer: Ship it'), false);
+  assert.equal(rendered.includes('What now?\nAnswer: Ship it'), true);
+});
+
+test('renderSlideContent renders ai question input and spinner before completion', () => {
+  const slide: Slide = {
+    index: 1,
+    raw: '[QUESTION]\nInvestigate',
+    body: 'Investigate',
+    isAsciiArt: false,
+    hasQuestion: true,
+    aiSimulation: {
+      intervalMinMs: 3000,
+      intervalMaxMs: 5000,
+      steps: [{content: '<color fg="green">[OK]</color> Connecting...'}],
+      finalContent: 'ANALYSIS COMPLETE'
+    },
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({
+    slide,
+    answer: {slideIndex: 1, answer: 'Why is throughput low?'},
+    aiSimulationProgress: {emittedStepCount: 0, isComplete: false},
+    aiSimulationSpinnerFrame: '⠋'
+  });
+
+  assert.match(rendered, /Investigate/);
+  assert.match(rendered, /> Why is throughput low\?/);
+  assert.match(rendered, /⠋ Thinking\.\.\./);
+  assert.equal(rendered.includes('Investigate\n\n> Why is throughput low?'), false);
+  assert.equal(rendered.includes('Investigate\n> Why is throughput low?'), true);
+});
+
+test('renderSlideContent keeps a paragraph-wrapped question prompt directly under the sentence', () => {
+  const slide: Slide = {
+    index: 1,
+    raw: '<p max-width=72 align=left>\\nCompared to humans, how does AI-generated code affect question churn?\\n</p>',
+    body: '<p max-width=72 align=left>\nCompared to humans, how does AI-generated code affect question churn?\n</p>',
+    isAsciiArt: false,
+    hasQuestion: true,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({
+    slide,
+    questionInput: ''
+  });
+
+  const lines = rendered.split('\n');
+
+  assert.match(lines[0] ?? '', /Compared to humans, how does AI-generated code affect question churn\?/);
+  assert.equal(lines[1], 'Answer: ');
+  assert.notEqual(lines[0], '');
+});
+
+test('renderSlideContent preserves paragraph padding for one-line questions', () => {
+  const slide: Slide = {
+    index: 1,
+    raw: '<p max-width=72 align=left>Compared to humans, how good is the quality of AI-generated code?</p>',
+    body: '<p max-width=72 align=left>Compared to humans, how good is the quality of AI-generated code?</p>',
+    isAsciiArt: false,
+    hasQuestion: true,
+    aiSimulation: {
+      intervalMinMs: 3000,
+      intervalMaxMs: 5000,
+      steps: [{content: 'hello'}]
+    },
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({
+    slide,
+    questionInput: ''
+  });
+
+  const lines = rendered.split('\n');
+  assert.equal(lines[0]?.endsWith('       '), true);
+  assert.equal(lines[1], '> ');
+});
+
+test('renderSlideContent renders streamed ai steps and final content with colors and paragraphs', () => {
+  const slide: Slide = {
+    index: 1,
+    raw: '[QUESTION]\nInvestigate',
+    body: 'Investigate',
+    isAsciiArt: false,
+    hasQuestion: true,
+    aiSimulation: {
+      intervalMinMs: 3000,
+      intervalMaxMs: 5000,
+      steps: [
+        {content: '<color fg="green">[OK]</color> Connecting...'},
+        {content: '<p max-width=18 align=left>Sampling 153 million lines of code...</p>'}
+      ],
+      finalContent:
+        '<color fg="red">ANALYSIS COMPLETE:</color> THE REVOLUTION IS LEAKING.'
+    },
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({
+    slide,
+    answer: {slideIndex: 1, answer: 'Why is throughput low?'},
+    aiSimulationProgress: {emittedStepCount: 2, isComplete: true}
+  });
+
+  assert.match(rendered, /\x1b\[32m\[OK]\x1b\[39m Connecting\.\.\./);
+  assert.match(rendered, /Sampling 153/);
+  assert.match(rendered, /million lines of/);
+  assert.match(rendered, /\x1b\[31mANALYSIS COMPLETE:\x1b\[39m THE REVOLUTION IS LEAKING\./);
 });
 
 test('renderSlideContent renders multi-line titles inside a padded box', () => {

@@ -42,7 +42,7 @@ test('ensureQrImage generates a png when missing', async () => {
   assert.equal(fileStat.size > 0, true);
 });
 
-test('ensureQrImage reuses an existing file if present', async () => {
+test('ensureQrImage reuses an existing file if keycode', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'keycode-qr-'));
   const imagesDirectory = join(directory, 'images');
   await mkdir(imagesDirectory, {recursive: true});

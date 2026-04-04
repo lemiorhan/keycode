@@ -1,4 +1,5 @@
 import type {QuestionState, Slide} from './types.js';
+import type {AiSimulationProgress} from './aiSimulation.js';
 import {renderInlineColors} from './colorText.js';
 import {renderParagraphBlocks} from './paragraphTag.js';
 import {applyRevealLines} from './revealLines.js';
@@ -36,25 +37,79 @@ interface RenderSlideOptions {
   questionInput?: string;
   mediaError?: string;
   revealCount?: number;
+  aiSimulationProgress?: AiSimulationProgress;
+  aiSimulationSpinnerFrame?: string;
+}
+
+function renderRichTextBlock(content: string, size: Slide['size']): string {
+  const spacing = size === 'normal' ? '\n' : '\n\n';
+  const bodyWithParagraphs = renderParagraphBlocks(content.trimEnd());
+
+  return renderInlineColors(bodyWithParagraphs.split('\n').join(spacing));
+}
+
+function renderQuestionSection(options: RenderSlideOptions): string {
+  const {
+    slide,
+    answer,
+    questionInput = '',
+    aiSimulationProgress,
+    aiSimulationSpinnerFrame
+  } = options;
+  const value = answer?.answer ?? questionInput;
+
+  if (!slide.aiSimulation) {
+    return `Answer: ${value}`;
+  }
+
+  const sections = [`> ${value}`];
+
+  if (!answer) {
+    return sections.join('\n');
+  }
+
+  const emittedSteps = slide.aiSimulation.steps
+    .slice(0, aiSimulationProgress?.emittedStepCount ?? 0)
+    .map((step) => renderRichTextBlock(step.content, slide.size));
+
+  if (emittedSteps.length > 0) {
+    sections.push(emittedSteps.join('\n'));
+  }
+
+  if (aiSimulationProgress?.isComplete) {
+    if (slide.aiSimulation.finalContent) {
+      sections.push(renderRichTextBlock(slide.aiSimulation.finalContent, slide.size));
+    }
+  } else if (aiSimulationSpinnerFrame) {
+    sections.push(`${aiSimulationSpinnerFrame} Thinking...`);
+  }
+
+  return sections.join('\n\n').replace(/\n+$/u, '');
 }
 
 export function renderSlideTextContent(options: RenderSlideOptions): string {
-  const {slide, answer, questionInput = '', mediaError, revealCount = 0} = options;
+  const {slide, mediaError, revealCount = 0} = options;
   const sections: string[] = [];
+  let hasBodySection = false;
 
   if (slide.titleText) {
     sections.push(renderTitleAscii(slide.titleText, slide.size));
   }
 
   if (slide.body.trim().length > 0) {
-    const spacing = slide.size === 'normal' ? '\n' : '\n\n';
     const revealedBody = applyRevealLines(slide.body.trimEnd(), revealCount);
-    const bodyWithParagraphs = renderParagraphBlocks(revealedBody);
-    sections.push(renderInlineColors(bodyWithParagraphs.split('\n').join(spacing)));
+    sections.push(renderRichTextBlock(revealedBody, slide.size));
+    hasBodySection = true;
   }
 
   if (slide.hasQuestion) {
-    sections.push(`Answer: ${answer?.answer ?? questionInput}`);
+    const questionSection = renderQuestionSection(options);
+
+    if (hasBodySection && sections.length > 0) {
+      sections[sections.length - 1] = `${sections.at(-1)}\n${questionSection}`;
+    } else {
+      sections.push(questionSection);
+    }
   }
 
   if (mediaError) {

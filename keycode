@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# ── Resolve script directory (follows symlinks) ──
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+
+while [ -L "$SOURCE_PATH" ]; do
+  SOURCE_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+  SOURCE_PATH="$(readlink "$SOURCE_PATH")"
+
+  if [[ "$SOURCE_PATH" != /* ]]; then
+    SOURCE_PATH="$SOURCE_DIR/$SOURCE_PATH"
+  fi
+done
+
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+
+# ── Usage ──
+
+usage() {
+  echo "Usage:" >&2
+  echo "  keycode present <deck-name>    present all .sld files in decks/<deck-name>/" >&2
+  echo "  keycode present <path/to/deck> present all .sld files in a deck directory" >&2
+  echo "  keycode init <deck-name>       scaffold a new deck in decks/" >&2
+  exit 1
+}
+
+if [ "$#" -lt 1 ]; then
+  usage
+fi
+
+# ── Subcommand: init ──
+
+if [ "$1" = "init" ]; then
+  if [ "$#" -ne 2 ] || [ -z "$2" ]; then
+    echo "Usage: keycode init <deck-name>" >&2
+    exit 1
+  fi
+
+  DECK_NAME="$2"
+  DECK_DIR="$SCRIPT_DIR/decks/$DECK_NAME"
+
+  if [ -e "$DECK_DIR" ]; then
+    echo "Deck already exists: decks/$DECK_NAME" >&2
+    exit 1
+  fi
+
+  mkdir -p "$DECK_DIR/images"
+
+  cat > "$DECK_DIR/01-slides.sld" <<EOF
+<beautify/>
+<title>
+$DECK_NAME
+</title>
+
+<color fg="gray">Your Name</color>
+
+---
+
+<header color=cyan>
+Agenda
+</header>
+
+* Introduction
+* Main idea
+* Demo
+* Closing
+
+---
+
+<header color=yellow>
+Key Point
+</header>
+
+<p max-width=72 align=left>
+Write your content here. You can use <color fg="cyan">inline colors</color>, <footnote>footnotes</footnote>, <qr>QR codes</qr>, and split-screen media layouts.
+</p>
+
+---
+
+<header color=magenta>
+Thank You
+</header>
+
+Questions?
+EOF
+
+  echo "Created deck: decks/$DECK_NAME"
+  echo "  slides: decks/$DECK_NAME/01-slides.sld"
+  echo "  images: decks/$DECK_NAME/images/"
+  echo ""
+  echo "Run with: keycode present $DECK_NAME"
+  exit 0
+fi
+
+# ── Subcommand: present ──
+
+if [ "$1" = "present" ]; then
+  if [ "$#" -ne 2 ]; then
+    echo "Usage: keycode present <deck-name | path/to/deck>" >&2
+    exit 1
+  fi
+  ARG="$2"
+else
+  usage
+fi
+
+# If arg contains no '/', treat as a deck name under decks/
+if [[ "$ARG" != */* ]]; then
+  DECK_DIR="$SCRIPT_DIR/decks/$ARG"
+else
+  DECK_DIR="$ARG"
+fi
+
+if [ ! -d "$DECK_DIR" ]; then
+  echo "Deck directory not found: $DECK_DIR" >&2
+  exit 1
+fi
+
+if [ -f "$SCRIPT_DIR/dist/src/cli.js" ]; then
+  exec node "$SCRIPT_DIR/dist/src/cli.js" "$DECK_DIR"
+fi
+
+exec npx tsx "$SCRIPT_DIR/src/cli.tsx" "$DECK_DIR"

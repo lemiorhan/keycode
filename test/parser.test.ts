@@ -46,6 +46,31 @@ What do you think?
   assert.equal(deck.slides[0]?.body, 'Ask the room:\nWhat do you think?');
 });
 
+test('parseSlides extracts ai simulation blocks from question slides', () => {
+  const deck = parseSlides(`
+Ask the room:
+[QUESTION]
+
+<ai-sim interval-min=3100 interval-max=4500>
+  <ai-step delay-ms=1200><color fg="green">[OK]</color> Connecting...</ai-step>
+  <ai-step><p max-width=20 align=left>Second step wraps cleanly</p></ai-step>
+  <ai-final>ANALYSIS COMPLETE</ai-final>
+</ai-sim>
+`);
+
+  assert.equal(deck.slides[0]?.hasQuestion, true);
+  assert.equal(deck.slides[0]?.body, 'Ask the room:');
+  assert.deepEqual(deck.slides[0]?.aiSimulation, {
+    intervalMinMs: 3100,
+    intervalMaxMs: 4500,
+    steps: [
+      {content: '<color fg="green">[OK]</color> Connecting...', delayMs: 1200},
+      {content: '<p max-width=20 align=left>Second step wraps cleanly</p>'}
+    ],
+    finalContent: 'ANALYSIS COMPLETE'
+  });
+});
+
 test('parseSlides ignores lines that start with double-slash comments', () => {
   const deck = parseSlides(`
 Visible line
@@ -55,6 +80,27 @@ Still visible
 `);
 
   assert.equal(deck.slides[0]?.body, 'Visible line\nStill visible');
+});
+
+test('parseSlides ignores multi-line block comments', () => {
+  const deck = parseSlides(`
+Visible line
+/*
+Hidden line
+Another hidden line
+*/
+Still visible
+`);
+
+  assert.equal(deck.slides[0]?.body, 'Visible line\n\nStill visible');
+});
+
+test('parseSlides strips inline block comments from slide text', () => {
+  const deck = parseSlides(`
+Visible /* hidden */ line
+`);
+
+  assert.equal(deck.slides[0]?.body, 'Visible  line');
 });
 
 test('parseSlides strips image-url blocks from slide body', () => {
@@ -129,6 +175,31 @@ Centered by default
 `);
 
   assert.equal(deck.slides[0]?.align, undefined);
+});
+
+test('parseSlides extracts slide-number tags and removes them from body content', () => {
+  const deck = parseSlides(`
+<slide-number v-align=top h-align=left/>
+Visible body
+`);
+
+  assert.deepEqual(deck.slides[0]?.slideNumber, {
+    vAlign: 'top',
+    hAlign: 'left'
+  });
+  assert.equal(deck.slides[0]?.body, 'Visible body');
+});
+
+test('parseSlides defaults slide-number tags to bottom-right', () => {
+  const deck = parseSlides(`
+<slide-number/>
+Body
+`);
+
+  assert.deepEqual(deck.slides[0]?.slideNumber, {
+    vAlign: 'bottom',
+    hAlign: 'right'
+  });
 });
 
 test('parseSlides extracts qr blocks and removes them from body content', () => {

@@ -1,30 +1,30 @@
 #!/usr/bin/env node
 import {existsSync, watch, type FSWatcher} from 'node:fs';
-import {dirname, resolve} from 'node:path';
+import {resolve} from 'node:path';
 import React, {useEffect, useState} from 'react';
 import {render} from 'ink';
 import {parseSlides} from './parser.js';
-import {readSlidesFile} from './file.js';
+import {readDeckDirectory} from './file.js';
 import {PresentationApp} from './PresentationApp.js';
 import type {Slide} from './types.js';
 
 interface PresentationRootProps {
-  slidesPath: string;
   deckDirectory: string;
   initialSlides: Slide[];
+  initialSldFiles: string[];
 }
 
 function PresentationRoot({
-  slidesPath,
   deckDirectory,
-  initialSlides
+  initialSlides,
+  initialSldFiles
 }: PresentationRootProps): React.JSX.Element {
   const [slides, setSlides] = useState(initialSlides);
   const [mediaVersion, setMediaVersion] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    let slidesWatcher: FSWatcher | undefined;
+    const sldWatchers: FSWatcher[] = [];
     let imagesWatcher: FSWatcher | undefined;
     let disposed = false;
     let reloadTimer: NodeJS.Timeout | undefined;
@@ -40,7 +40,7 @@ function PresentationRoot({
 
     const reloadDeck = async (): Promise<void> => {
       try {
-        const source = await readSlidesFile(slidesPath);
+        const {source} = await readDeckDirectory(deckDirectory);
         const deck = parseSlides(source);
 
         if (disposed || deck.slides.length === 0) {
@@ -65,9 +65,11 @@ function PresentationRoot({
       }, 120);
     };
 
-    slidesWatcher = watch(slidesPath, () => {
-      scheduleReload();
-    });
+    for (const sldFile of initialSldFiles) {
+      sldWatchers.push(watch(sldFile, () => {
+        scheduleReload();
+      }));
+    }
 
     if (existsSync(imagesDirectory)) {
       imagesWatcher = watch(imagesDirectory, () => {
@@ -78,10 +80,12 @@ function PresentationRoot({
     return () => {
       disposed = true;
       clearTimer();
-      slidesWatcher?.close();
+      for (const w of sldWatchers) {
+        w.close();
+      }
       imagesWatcher?.close();
     };
-  }, [deckDirectory, slidesPath]);
+  }, [deckDirectory, initialSldFiles]);
 
   return (
     <PresentationApp
@@ -94,30 +98,29 @@ function PresentationRoot({
 }
 
 async function main(): Promise<void> {
-  const slidesPathInput = process.argv[2];
+  const deckDirInput = process.argv[2];
 
-  if (!slidesPathInput) {
-    console.error('Usage: present <slides-file>');
+  if (!deckDirInput) {
+    console.error('Usage: keycode present <deck-name>');
     process.exitCode = 1;
     return;
   }
 
-  const slidesPath = resolve(slidesPathInput);
-  const deckDirectory = dirname(slidesPath);
-  const source = await readSlidesFile(slidesPath);
+  const deckDirectory = resolve(deckDirInput);
+  const {source, sldFiles} = await readDeckDirectory(deckDirectory);
   const deck = parseSlides(source);
 
   if (deck.slides.length === 0) {
-    console.error('No slides found in the provided file.');
+    console.error('No slides found in the deck directory.');
     process.exitCode = 1;
     return;
   }
 
   render(
     <PresentationRoot
-      slidesPath={slidesPath}
       deckDirectory={deckDirectory}
       initialSlides={deck.slides}
+      initialSldFiles={sldFiles}
     />,
     {
     exitOnCtrlC: false

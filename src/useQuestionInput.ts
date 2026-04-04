@@ -4,6 +4,7 @@ import {useEffect, useState} from 'react';
 interface UseQuestionInputOptions {
   enabled: boolean;
   initialValue?: string;
+  interceptInput?: (input: string, key: {ctrl: boolean; meta: boolean}) => boolean;
   onSubmit: (value: string) => void;
 }
 
@@ -16,6 +17,10 @@ export function useQuestionInput(options: UseQuestionInputOptions): string {
 
   useInput((input, key) => {
     if (!options.enabled) {
+      return;
+    }
+
+    if (options.interceptInput?.(input, {ctrl: key.ctrl, meta: key.meta})) {
       return;
     }
 

@@ -49,3 +49,21 @@ test('shouldSkipTransition keeps transitions enabled for qr slides', () => {
 
   assert.equal(shouldSkipTransition(slide, 'body'), false);
 });
+
+test('shouldSkipTransition skips transitions for ai simulation slides', () => {
+  const slide: Slide = {
+    index: 0,
+    raw: '[QUESTION]\n<ai-sim><ai-step>Working</ai-step></ai-sim>',
+    body: '',
+    isAsciiArt: false,
+    hasQuestion: true,
+    aiSimulation: {
+      intervalMinMs: 3000,
+      intervalMaxMs: 5000,
+      steps: [{content: 'Working'}]
+    },
+    size: 'normal'
+  };
+
+  assert.equal(shouldSkipTransition(slide, 'body'), true);
+});

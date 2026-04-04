@@ -61,6 +61,14 @@ function wrapParagraphMarkup(content: string, maxWidth: number, align: SlideAlig
     .split('\n')
     .map((line) => line.replace(/[ \t]+/g, ' ').trim());
 
+  while (normalizedLines[0] === '') {
+    normalizedLines.shift();
+  }
+
+  while (normalizedLines.at(-1) === '') {
+    normalizedLines.pop();
+  }
+
   const wrappedLines = normalizedLines.flatMap((line) => {
     if (!line) {
       return [''];

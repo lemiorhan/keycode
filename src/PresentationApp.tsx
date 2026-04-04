@@ -1,6 +1,13 @@
 import {Box, Text, useApp, useInput, useStdout} from 'ink';
 import {access} from 'node:fs/promises';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  completeAiSimulationProgress,
+  nextAiSimulationProgress,
+  resolveAiSimulationDelay,
+  startAiSimulationProgress,
+  type AiSimulationProgress
+} from './aiSimulation.js';
 import {centerStackedSections, centerTextBlock, composeTwoScreenLayout} from './layout.js';
 import {
   ensureQrImage,
@@ -11,12 +18,15 @@ import {
 import {IMAGE_ANCHOR_TOKEN} from './imageTag.js';
 import {countRevealLines} from './revealLines.js';
 import {slideDefaultAlign} from './slideAlign.js';
+import {resolveActiveSlideNumber} from './slideNumber.js';
+import {parseSlideJumpTarget} from './slideJump.js';
 import type {QuestionState, Slide, SlideScreen} from './types.js';
 import {renderSlideFootnote, renderSlideHeader, renderSlideTextContent} from './renderSlide.js';
 import {buildTransitionFrames} from './transition.js';
 import {shouldSkipTransition} from './transitionPolicy.js';
 import {useBlinkCursor} from './useBlink.js';
 import {useQuestionInput} from './useQuestionInput.js';
+import {useSpinnerFrame} from './useSpinnerFrame.js';
 import stringWidth from 'string-width';
 
 interface PresentationAppProps {
@@ -122,15 +132,42 @@ export function PresentationApp({
   const [displayFootnote, setDisplayFootnote] = useState<string | undefined>(undefined);
   const [mediaError, setMediaError] = useState<string | undefined>(undefined);
   const [answers, setAnswers] = useState<Record<number, QuestionState>>({});
+  const [aiSimulationStates, setAiSimulationStates] = useState<Record<number, AiSimulationProgress>>(
+    {}
+  );
+  const [jumpInput, setJumpInput] = useState<string | undefined>(undefined);
   const [revealCounts, setRevealCounts] = useState<Record<number, number>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const aiSimulationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previousSlideIndexRef = useRef<number | null>(null);
   const externalMediaViewerRef = useRef(new ExternalMediaViewer());
-  const questionLocked = slides[slideIndex]?.hasQuestion && !answers[slideIndex];
   const blinkVisible = useBlinkCursor();
   const currentSlide = slides[slideIndex];
+  const currentAiSimulationState = aiSimulationStates[slideIndex];
+  const aiSimulationRunning = Boolean(
+    currentSlide?.aiSimulation && answers[slideIndex] && !currentAiSimulationState?.isComplete
+  );
+  const spinnerFrame = useSpinnerFrame(aiSimulationRunning);
+  const jumpModeActive = jumpInput !== undefined;
+  const questionInputEnabled =
+    Boolean(slides[slideIndex]?.hasQuestion) && !answers[slideIndex] && !jumpModeActive;
+  const questionLocked =
+    Boolean(slides[slideIndex]?.hasQuestion) &&
+    (!answers[slideIndex] || aiSimulationRunning);
+  const jumpHintLine = jumpModeActive ? `:${jumpInput}${blinkVisible ? '█' : ' '}` : undefined;
   const currentRevealCount = revealCounts[slideIndex] ?? 0;
   const rows = stdout.rows ?? process.stdout.rows ?? 24;
   const columns = stdout.columns ?? process.stdout.columns ?? 80;
+  const activeSlideNumber = useMemo(
+    () => resolveActiveSlideNumber(slides, slideIndex),
+    [slideIndex, slides]
+  );
+  const topOverlayLine = activeSlideNumber?.vAlign === 'top' ? activeSlideNumber.value : undefined;
+  const bottomOverlayLine =
+    activeSlideNumber?.vAlign === 'bottom' ? activeSlideNumber.value : undefined;
+  const topOverlayAlign = activeSlideNumber?.vAlign === 'top' ? activeSlideNumber.hAlign : undefined;
+  const bottomOverlayAlign =
+    activeSlideNumber?.vAlign === 'bottom' ? activeSlideNumber.hAlign : undefined;
 
   const totalRevealLines = (slide?: Slide): number => countRevealLines(slide?.body ?? '');
 
@@ -150,9 +187,45 @@ export function PresentationApp({
     setSlideIndex((current) => Math.min(current, slides.length - 1));
   }, [slides]);
 
+  useEffect(() => {
+    const previousSlideIndex = previousSlideIndexRef.current;
+    previousSlideIndexRef.current = slideIndex;
+
+    if (previousSlideIndex === null || previousSlideIndex === slideIndex || !currentSlide?.aiSimulation) {
+      return;
+    }
+
+    setAnswers((current) => {
+      if (!(slideIndex in current)) {
+        return current;
+      }
+
+      const next = {...current};
+      delete next[slideIndex];
+      return next;
+    });
+    setAiSimulationStates((current) => {
+      if (!(slideIndex in current)) {
+        return current;
+      }
+
+      const next = {...current};
+      delete next[slideIndex];
+      return next;
+    });
+  }, [currentSlide?.aiSimulation, slideIndex]);
+
   const questionInput = useQuestionInput({
-    enabled: Boolean(questionLocked),
+    enabled: questionInputEnabled,
     initialValue: answers[slideIndex]?.answer ?? '',
+    interceptInput: (input, key) => {
+      if (jumpModeActive || key.ctrl || key.meta || input !== ':') {
+        return false;
+      }
+
+      setJumpInput('');
+      return true;
+    },
     onSubmit: (value) => {
       if (!currentSlide?.hasQuestion) {
         return;
@@ -165,6 +238,13 @@ export function PresentationApp({
           answer: value
         }
       }));
+
+      if (currentSlide.aiSimulation) {
+        setAiSimulationStates((current) => ({
+          ...current,
+          [slideIndex]: startAiSimulationProgress()
+        }));
+      }
     }
   });
 
@@ -178,9 +258,21 @@ export function PresentationApp({
       answer: answers[slideIndex],
       questionInput,
       mediaError,
-      revealCount: currentRevealCount
+      revealCount: currentRevealCount,
+      aiSimulationProgress: currentAiSimulationState,
+      aiSimulationSpinnerFrame: aiSimulationRunning ? spinnerFrame : undefined
     });
-  }, [answers, currentRevealCount, currentSlide, mediaError, questionInput, slideIndex]);
+  }, [
+    answers,
+    aiSimulationRunning,
+    currentAiSimulationState,
+    currentRevealCount,
+    currentSlide,
+    mediaError,
+    questionInput,
+    slideIndex,
+    spinnerFrame
+  ]);
 
   const renderedFootnote = useMemo(() => {
     if (!currentSlide) {
@@ -236,7 +328,13 @@ export function PresentationApp({
     columns,
     align: isTransitioning ? displayAlign : effectiveAlign,
     headerContent: isTransitioning ? displayHeader : renderedHeader,
-    footerContent: isTransitioning ? displayFootnote : renderedFootnote
+    footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+    hintLine: jumpHintLine,
+    topOverlayLine,
+    topOverlayAlign,
+    bottomOverlayLine,
+    bottomOverlayAlign,
+    forcePerLineCenter: !!currentSlide?.titleText
   });
   const screens =
     currentSlide?.screens && currentSlide.screens.length === 2
@@ -249,6 +347,11 @@ export function PresentationApp({
             columns,
             headerContent: isTransitioning ? displayHeader : renderedHeader,
             footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+            hintLine: jumpHintLine,
+            topOverlayLine,
+            topOverlayAlign,
+            bottomOverlayLine,
+            bottomOverlayAlign,
             screens
           })
         : currentSlide?.asciiArt
@@ -260,6 +363,11 @@ export function PresentationApp({
                 align: 'center',
                 headerContent: isTransitioning ? displayHeader : renderedHeader,
                 footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+                hintLine: jumpHintLine,
+                topOverlayLine,
+                topOverlayAlign,
+                bottomOverlayLine,
+                bottomOverlayAlign,
                 sectionGap: 1
               }
             )
@@ -272,6 +380,11 @@ export function PresentationApp({
                   columns,
                   headerContent: isTransitioning ? displayHeader : renderedHeader,
                   footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+                  hintLine: jumpHintLine,
+                  topOverlayLine,
+                  topOverlayAlign,
+                  bottomOverlayLine,
+                  bottomOverlayAlign,
                   screens
                 }
               )
@@ -280,7 +393,57 @@ export function PresentationApp({
     () => extractImageAnchor(frameWithScreens),
     [frameWithScreens]
   );
-  const displayedFrame = isTransitioning ? anchoredFrame : addCursor(anchoredFrame, blinkVisible, columns);
+  const displayedFrame =
+    isTransitioning || aiSimulationRunning || jumpModeActive
+      ? anchoredFrame
+      : addCursor(anchoredFrame, blinkVisible, columns);
+
+  useEffect(() => {
+    if (aiSimulationTimerRef.current) {
+      clearTimeout(aiSimulationTimerRef.current);
+      aiSimulationTimerRef.current = null;
+    }
+
+    if (!currentSlide?.aiSimulation || !answers[slideIndex]) {
+      return;
+    }
+
+    if (currentAiSimulationState?.isComplete) {
+      return;
+    }
+
+    const emittedStepCount = currentAiSimulationState?.emittedStepCount ?? 0;
+
+    if (emittedStepCount >= currentSlide.aiSimulation.steps.length) {
+      setAiSimulationStates((current) => ({
+        ...current,
+        [slideIndex]: {
+          emittedStepCount,
+          isComplete: true
+        }
+      }));
+      return;
+    }
+
+    aiSimulationTimerRef.current = setTimeout(() => {
+      setAiSimulationStates((current) => ({
+        ...current,
+        [slideIndex]: nextAiSimulationProgress(current[slideIndex], currentSlide.aiSimulation!)
+      }));
+    }, resolveAiSimulationDelay(currentSlide.aiSimulation, emittedStepCount));
+
+    return () => {
+      if (aiSimulationTimerRef.current) {
+        clearTimeout(aiSimulationTimerRef.current);
+        aiSimulationTimerRef.current = null;
+      }
+    };
+  }, [
+    answers[slideIndex],
+    currentAiSimulationState,
+    currentSlide,
+    slideIndex
+  ]);
 
   useEffect(() => {
     if (!currentSlide) {
@@ -432,6 +595,11 @@ export function PresentationApp({
     const viewer = externalMediaViewerRef.current;
 
     return () => {
+      if (aiSimulationTimerRef.current) {
+        clearTimeout(aiSimulationTimerRef.current);
+        aiSimulationTimerRef.current = null;
+      }
+
       viewer.close();
     };
   }, []);
@@ -444,6 +612,58 @@ export function PresentationApp({
 
     if (input === 'q') {
       exit();
+      return;
+    }
+
+    if (jumpModeActive) {
+      if (key.escape) {
+        setJumpInput(undefined);
+        return;
+      }
+
+      if (key.return) {
+        const targetSlideIndex = parseSlideJumpTarget(jumpInput ?? '', slides.length);
+        setJumpInput(undefined);
+
+        if (targetSlideIndex !== undefined) {
+          setSlideIndex(targetSlideIndex);
+        }
+
+        return;
+      }
+
+      if (key.backspace || key.delete) {
+        setJumpInput((current) => (current ?? '').slice(0, -1));
+        return;
+      }
+
+      if (!key.ctrl && !key.meta && /^[0-9]$/.test(input)) {
+        setJumpInput((current) => `${current ?? ''}${input}`);
+      }
+
+      return;
+    }
+
+    if (!key.ctrl && !key.meta && input === ':') {
+      setJumpInput('');
+      return;
+    }
+
+    if (
+      key.escape &&
+      currentSlide?.aiSimulation &&
+      answers[slideIndex] &&
+      !currentAiSimulationState?.isComplete
+    ) {
+      if (aiSimulationTimerRef.current) {
+        clearTimeout(aiSimulationTimerRef.current);
+        aiSimulationTimerRef.current = null;
+      }
+
+      setAiSimulationStates((current) => ({
+        ...current,
+        [slideIndex]: completeAiSimulationProgress(currentSlide.aiSimulation!)
+      }));
       return;
     }
 
