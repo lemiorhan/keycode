@@ -246,9 +246,25 @@ test('renderSlideContent preserves explicit newlines inside paragraph blocks', (
   assert.match(lines[3] ?? '', /epsilon zeta/);
 });
 
-test('renderSlideContent appends media errors after the slide body', () => {
+test('renderSlideContent preserves inline colors inside paragraph blocks', () => {
   const slide: Slide = {
     index: 8,
+    raw: '<p max-width=24 align=left>Alpha <color fg="cyan">beta gamma</color> delta</p>',
+    body: '<p max-width=24 align=left>Alpha <color fg="cyan">beta gamma</color> delta</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+
+  assert.equal(rendered.includes('<color'), false);
+  assert.match(rendered, /\x1b\[36m beta gamma\x1b\[39m/);
+});
+
+test('renderSlideContent appends media errors after the slide body', () => {
+  const slide: Slide = {
+    index: 9,
     raw: 'Body',
     body: 'Body',
     isAsciiArt: false,

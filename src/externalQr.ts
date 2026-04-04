@@ -118,6 +118,50 @@ export function overlayFrame(bounds: WindowBounds, options: OverlayFrameOptions)
   return {left, top, width, height};
 }
 
+interface OverlayCellFrameOptions {
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+  widthPercent: number;
+  anchorRow: number;
+  anchorColumn: number;
+  terminalRows: number;
+  terminalColumns: number;
+}
+
+export function overlayFrameAtCell(
+  bounds: WindowBounds,
+  options: OverlayCellFrameOptions
+): {left: number; top: number; width: number; height: number} {
+  const usableWidth = Math.max(bounds.right - bounds.left - OVERLAY_WINDOW_MARGIN * 2, 1);
+  const usableHeight = Math.max(bounds.bottom - bounds.top - OVERLAY_WINDOW_MARGIN * 2, 1);
+  let width = Math.max(Math.floor(usableWidth * (options.widthPercent / 100)), 1);
+  let height = Math.max(
+    Math.round(width * (options.intrinsicHeight / Math.max(options.intrinsicWidth, 1))),
+    1
+  );
+
+  if (height > usableHeight) {
+    const scale = usableHeight / height;
+    height = usableHeight;
+    width = Math.max(Math.floor(width * scale), 1);
+  }
+
+  const cellWidth = usableWidth / Math.max(options.terminalColumns, 1);
+  const cellHeight = usableHeight / Math.max(options.terminalRows, 1);
+  const centerX =
+    bounds.left + OVERLAY_WINDOW_MARGIN + (options.anchorColumn + 0.5) * cellWidth;
+  const centerY =
+    bounds.top + OVERLAY_WINDOW_MARGIN + (options.anchorRow + 0.5) * cellHeight;
+  const minLeft = bounds.left + OVERLAY_WINDOW_MARGIN;
+  const maxLeft = bounds.right - OVERLAY_WINDOW_MARGIN - width;
+  const minTop = bounds.top + OVERLAY_WINDOW_MARGIN;
+  const maxTop = bounds.bottom - OVERLAY_WINDOW_MARGIN - height;
+  const left = Math.min(Math.max(Math.round(centerX - width / 2), minLeft), maxLeft);
+  const top = Math.min(Math.max(Math.round(centerY - height / 2), minTop), maxTop);
+
+  return {left, top, width, height};
+}
+
 interface OverlayPaneFrameOptions {
   intrinsicWidth: number;
   intrinsicHeight: number;
@@ -190,7 +234,7 @@ export function overlayFrameInPane(
   return {left, top, width, height};
 }
 
-function readImageSize(imagePath: string): {width: number; height: number} | undefined {
+export function readImageSize(imagePath: string): {width: number; height: number} | undefined {
   try {
     const output = execFileSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', imagePath], {
       encoding: 'utf8'
@@ -294,6 +338,10 @@ export class ExternalMediaViewer {
       intrinsicWidth?: number;
       intrinsicHeight?: number;
       backgroundColor?: string;
+      anchorRow?: number;
+      anchorColumn?: number;
+      terminalRows?: number;
+      terminalColumns?: number;
     } = {}
   ): void {
     if (process.platform !== 'darwin') {
@@ -317,9 +365,17 @@ export class ExternalMediaViewer {
     const paneKey = panePosition && options.screens
       ? `${panePosition}:${options.screens[0].widthPercent}/${options.screens[1].widthPercent}`
       : 'none';
+    const anchorKey =
+      options.anchorRow !== undefined &&
+      options.anchorColumn !== undefined &&
+      options.terminalRows !== undefined &&
+      options.terminalColumns !== undefined
+        ? `${options.anchorRow}:${options.anchorColumn}:${options.terminalRows}:${options.terminalColumns}`
+        : 'none';
     const currentKey = `${imagePath}|${position}|${align}|${widthPercent}|${backgroundColor}|${paneKey}|${imageSize.width}x${imageSize.height}`;
+    const keyedCurrent = `${currentKey}|${anchorKey}`;
 
-    if (this.currentKey === currentKey && this.child && !this.child.killed) {
+    if (this.currentKey === keyedCurrent && this.child && !this.child.killed) {
       return;
     }
 
@@ -332,7 +388,20 @@ export class ExternalMediaViewer {
     }
 
     const frame =
-      panePosition && options.screens
+      options.anchorRow !== undefined &&
+      options.anchorColumn !== undefined &&
+      options.terminalRows !== undefined &&
+      options.terminalColumns !== undefined
+        ? overlayFrameAtCell(bounds, {
+            intrinsicWidth: imageSize.width,
+            intrinsicHeight: imageSize.height,
+            widthPercent,
+            anchorRow: options.anchorRow,
+            anchorColumn: options.anchorColumn,
+            terminalRows: options.terminalRows,
+            terminalColumns: options.terminalColumns
+          })
+        : panePosition && options.screens
         ? overlayFrameInPane(bounds, {
             intrinsicWidth: imageSize.width,
             intrinsicHeight: imageSize.height,
@@ -377,7 +446,7 @@ export class ExternalMediaViewer {
     });
 
     this.child = child;
-    this.currentKey = currentKey;
+    this.currentKey = keyedCurrent;
   }
 
   close(): void {

@@ -16,12 +16,19 @@ function normalizeDeckSource(source: string): string {
   return source.replace(/\r\n/g, '\n');
 }
 
+function stripCommentLines(source: string): string {
+  return source
+    .split('\n')
+    .filter((line) => !/^[ \t]*\/\//.test(line))
+    .join('\n');
+}
+
 function trimOuterBlankLines(value: string): string {
   return value.replace(/^\n+/, '').replace(/\n+$/, '');
 }
 
 export function parseSlides(source: string): ParsedDeck {
-  const normalized = normalizeDeckSource(source);
+  const normalized = stripCommentLines(normalizeDeckSource(source));
   const rawSlides = normalized.split(SLIDE_SEPARATOR).map(trimOuterBlankLines);
   const nonEmptySlides = rawSlides.filter((slide) => slide.length > 0);
 

@@ -1,7 +1,13 @@
-export const COLOR_TAG_PATTERN =
-  /<color\s+fg="(red|green|yellow|blue|magenta|cyan|white|gray)">([\s\S]*?)<\/color>/gi;
-const COLOR_TAG_MARKUP_PATTERN =
-  /<color\s+fg="(?:red|green|yellow|blue|magenta|cyan|white|gray)">|<\/color>/gi;
+const COLOR_NAME_PATTERN = 'red|green|yellow|blue|magenta|cyan|white|gray';
+
+export const COLOR_TAG_PATTERN = new RegExp(
+  `<color\\s+fg=(?:"|')(${COLOR_NAME_PATTERN})(?:"|')>([\\s\\S]*?)<\\/color>`,
+  'gi'
+);
+export const COLOR_TAG_MARKUP_PATTERN = new RegExp(
+  `<color\\s+fg=(?:"|')(?:${COLOR_NAME_PATTERN})(?:"|')>|<\\/color>`,
+  'gi'
+);
 
 const ANSI_COLORS: Record<string, string> = {
   red: '\x1b[31m',

@@ -1,11 +1,17 @@
 import {Box, Text, useApp, useInput, useStdout} from 'ink';
 import {access} from 'node:fs/promises';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {centerTextBlock, composeTwoScreenLayout} from './layout.js';
-import {ensureQrImage, ExternalMediaViewer, resolveDeckImagePath} from './externalQr.js';
+import {centerStackedSections, centerTextBlock, composeTwoScreenLayout} from './layout.js';
+import {
+  ensureQrImage,
+  ExternalMediaViewer,
+  readImageSize,
+  resolveDeckImagePath
+} from './externalQr.js';
+import {IMAGE_ANCHOR_TOKEN} from './imageTag.js';
 import {countRevealLines} from './revealLines.js';
 import {slideDefaultAlign} from './slideAlign.js';
-import type {QuestionState, Slide} from './types.js';
+import type {QuestionState, Slide, SlideScreen} from './types.js';
 import {renderSlideFootnote, renderSlideHeader, renderSlideTextContent} from './renderSlide.js';
 import {buildTransitionFrames} from './transition.js';
 import {shouldSkipTransition} from './transitionPolicy.js';
@@ -28,6 +34,51 @@ const ANSI_PATTERN = /\x1B\[[0-9;]*m/g;
 
 function visibleWidth(line: string): number {
   return stringWidth(line.replace(ANSI_PATTERN, ''));
+}
+
+function extractImageAnchor(frame: string): {
+  frame: string;
+  anchor?: {row: number; column: number};
+} {
+  if (!frame.includes(IMAGE_ANCHOR_TOKEN)) {
+    return {frame};
+  }
+
+  const lines = frame.split('\n');
+  let anchor: {row: number; column: number} | undefined;
+
+  const sanitizedLines = lines.map((line, row) => {
+    const tokenIndex = line.indexOf(IMAGE_ANCHOR_TOKEN);
+
+    if (tokenIndex === -1) {
+      return line;
+    }
+
+    if (!anchor) {
+      anchor = {
+        row,
+        column: visibleWidth(line.slice(0, tokenIndex))
+      };
+    }
+
+    return line.replace(IMAGE_ANCHOR_TOKEN, '');
+  });
+
+  return {
+    frame: sanitizedLines.join('\n'),
+    anchor
+  };
+}
+
+function reserveInlineImageSpace(content: string, spacerRows: number): string {
+  if (!content.includes(IMAGE_ANCHOR_TOKEN) || spacerRows <= 1) {
+    return content;
+  }
+
+  const topRows = Math.floor((spacerRows - 1) / 2);
+  const bottomRows = spacerRows - 1 - topRows;
+  const replacement = `${'\n'.repeat(topRows)}${IMAGE_ANCHOR_TOKEN}${'\n'.repeat(bottomRows)}`;
+  return content.replace(IMAGE_ANCHOR_TOKEN, replacement);
 }
 
 function addCursor(content: string, cursorVisible: boolean, columns: number): string {
@@ -154,6 +205,82 @@ export function PresentationApp({
   }, [currentSlide]);
 
   const effectiveAlign = slideDefaultAlign(currentSlide);
+  const inlineImageSpacerRows = useMemo(() => {
+    if (!currentSlide?.imagePath || (currentSlide.screens && currentSlide.screens.length === 2)) {
+      return 0;
+    }
+
+    const imagePath = resolveDeckImagePath(deckDirectory, currentSlide.imagePath);
+    const imageSize = readImageSize(imagePath);
+
+    if (!imageSize) {
+      return 6;
+    }
+
+    const widthPercent = currentSlide.imageWidthPercent ?? 30;
+    const estimatedRows = Math.round(
+      rows * (widthPercent / 100) * (imageSize.height / Math.max(imageSize.width, 1))
+    );
+
+    return Math.min(Math.max(estimatedRows + 1, 4), Math.max(Math.floor(rows / 2), 4));
+  }, [
+    currentSlide?.imagePath,
+    currentSlide?.imageWidthPercent,
+    currentSlide?.screens,
+    deckDirectory,
+    rows
+  ]);
+  const visibleTextFrame = reserveInlineImageSpace(frame, inlineImageSpacerRows);
+  const finalFrame = centerTextBlock(visibleTextFrame, {
+    rows,
+    columns,
+    align: isTransitioning ? displayAlign : effectiveAlign,
+    headerContent: isTransitioning ? displayHeader : renderedHeader,
+    footerContent: isTransitioning ? displayFootnote : renderedFootnote
+  });
+  const screens =
+    currentSlide?.screens && currentSlide.screens.length === 2
+      ? (currentSlide.screens as [typeof currentSlide.screens[0], typeof currentSlide.screens[1]])
+      : undefined;
+  const frameWithScreens =
+    currentSlide?.asciiArt && screens
+        ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
+            rows,
+            columns,
+            headerContent: isTransitioning ? displayHeader : renderedHeader,
+            footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+            screens
+          })
+        : currentSlide?.asciiArt
+          ? centerStackedSections(
+              [currentSlide.asciiArt, visibleTextFrame],
+              {
+                rows,
+                columns,
+                align: 'center',
+                headerContent: isTransitioning ? displayHeader : renderedHeader,
+                footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+                sectionGap: 1
+              }
+            )
+          : currentSlide?.imagePath && screens
+            ? composeTwoScreenLayout(
+                '',
+                visibleTextFrame,
+                {
+                  rows,
+                  columns,
+                  headerContent: isTransitioning ? displayHeader : renderedHeader,
+                  footerContent: isTransitioning ? displayFootnote : renderedFootnote,
+                  screens
+                }
+              )
+            : finalFrame;
+  const {frame: anchoredFrame, anchor: inlineImageAnchor} = useMemo(
+    () => extractImageAnchor(frameWithScreens),
+    [frameWithScreens]
+  );
+  const displayedFrame = isTransitioning ? anchoredFrame : addCursor(anchoredFrame, blinkVisible, columns);
 
   useEffect(() => {
     if (!currentSlide) {
@@ -226,6 +353,11 @@ export function PresentationApp({
     let cancelled = false;
 
     if (currentSlide?.imagePath) {
+      const hasScreens = Boolean(currentSlide.screens && currentSlide.screens.length === 2);
+      const screenPair = hasScreens
+        ? ([currentSlide.screens![0], currentSlide.screens![1]] as [SlideScreen, SlideScreen])
+        : undefined;
+
       const imagePath = resolveDeckImagePath(deckDirectory, currentSlide.imagePath);
 
       void access(imagePath)
@@ -233,14 +365,20 @@ export function PresentationApp({
           if (!cancelled) {
             setMediaError(undefined);
             viewer.open(imagePath, {
-              align: 'center',
               widthPercent: currentSlide.imageWidthPercent,
               backgroundColor: currentSlide.imageBackgroundColor,
-              panePosition: 'left',
-              screens:
-                currentSlide.screens && currentSlide.screens.length === 2
-                  ? [currentSlide.screens[0], currentSlide.screens[1]]
-                  : undefined
+              ...(hasScreens
+                ? {
+                    align: 'center' as const,
+                    panePosition: 'left' as const,
+                    screens: screenPair
+                  }
+                : {
+                    anchorRow: Math.max((inlineImageAnchor?.row ?? Math.floor(rows / 2)) - 2, 0),
+                    anchorColumn: Math.floor(columns / 2),
+                    terminalRows: rows,
+                    terminalColumns: columns
+                  })
             });
           }
         })
@@ -280,11 +418,14 @@ export function PresentationApp({
     currentSlide?.imageWidthPercent,
     currentSlide?.imageBackgroundColor,
     currentSlide?.screens,
+    inlineImageAnchor?.row,
     currentSlide?.qrText,
     currentSlide?.qrColors,
     currentSlide?.qrWidthPercent,
     deckDirectory,
-    mediaVersion
+    mediaVersion,
+    rows,
+    columns
   ]);
 
   useEffect(() => {
@@ -348,53 +489,6 @@ export function PresentationApp({
       }
     }
   });
-
-  const visibleTextFrame = frame;
-  const finalFrame = centerTextBlock(visibleTextFrame, {
-    rows,
-    columns,
-    align: isTransitioning ? displayAlign : effectiveAlign,
-    headerContent: isTransitioning ? displayHeader : renderedHeader,
-    footerContent: isTransitioning ? displayFootnote : renderedFootnote
-  });
-  const screens =
-    currentSlide?.screens && currentSlide.screens.length === 2
-      ? (currentSlide.screens as [typeof currentSlide.screens[0], typeof currentSlide.screens[1]])
-      : undefined;
-  const frameWithScreens =
-    currentSlide?.asciiArt && screens
-        ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
-            rows,
-            columns,
-            headerContent: isTransitioning ? displayHeader : renderedHeader,
-            footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-            screens
-          })
-        : currentSlide?.asciiArt
-          ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
-              rows,
-              columns,
-              headerContent: isTransitioning ? displayHeader : renderedHeader,
-              footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-              screens: [
-                {widthPercent: 40, contentAlign: 'center'},
-              {widthPercent: 60, contentAlign: isTransitioning ? displayAlign : effectiveAlign}
-            ]
-          })
-        : currentSlide?.imagePath && screens
-          ? composeTwoScreenLayout(
-              '',
-              visibleTextFrame,
-              {
-                rows,
-                columns,
-                headerContent: isTransitioning ? displayHeader : renderedHeader,
-                footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-                screens
-              }
-            )
-          : finalFrame;
-  const displayedFrame = isTransitioning ? frameWithScreens : addCursor(frameWithScreens, blinkVisible, columns);
 
   return (
     <Box width="100%" height="100%">

@@ -140,6 +140,13 @@ function centerHeaderLines(headerContent: string, columns: number): string[] {
     .map((line) => `${' '.repeat(Math.max(Math.floor((columns - visibleWidth(line)) / 2), 0))}${line}`);
 }
 
+function centerPreservedBlock(lines: string[], columns: number): string[] {
+  const croppedLines = lines.map((line) => cropLine(line, columns));
+  const blockWidth = Math.max(...croppedLines.map((line) => visibleWidth(line)), 0);
+  const outerLeftPad = Math.max(Math.floor((columns - blockWidth) / 2), 0);
+  return croppedLines.map((line) => `${' '.repeat(outerLeftPad)}${line}`);
+}
+
 export function centerTextBlock(content: string, options: RenderOptions): string {
   const rows = Math.max(options.rows, 1);
   const columns = Math.max(options.columns, 1);
@@ -168,6 +175,62 @@ export function centerTextBlock(content: string, options: RenderOptions): string
 
   if (hintLine) {
     frameLines.push(cropLine(hintLine, columns));
+  }
+
+  return frameLines.join('\n');
+}
+
+export function centerStackedSections(
+  sections: string[],
+  options: RenderOptions & {sectionGap?: number}
+): string {
+  const rows = Math.max(options.rows, 1);
+  const columns = Math.max(options.columns, 1);
+  const align = options.align ?? 'center';
+  const headerContent = options.headerContent ?? '';
+  const footerContent = options.footerContent ?? '';
+  const sectionGap = Math.max(options.sectionGap ?? 1, 0);
+  const headerLines = headerContent ? centerHeaderLines(headerContent, columns) : [];
+  const reservedHeaderRows = headerLines.length > 0 ? headerLines.length + 2 : 0;
+  const footerLines = footerContent ? footerContent.split('\n').map((line) => cropLine(line, columns)) : [];
+  const reservedFooterRows = footerLines.length > 0 ? footerLines.length + 1 : 0;
+  const usableRows = Math.max(rows - reservedHeaderRows - reservedFooterRows, 1);
+  const normalizedSections = sections
+    .map((section) => section.trim().length > 0 ? section.replace(/\n+$/u, '') : '')
+    .filter((section) => section.length > 0);
+
+  const bodyLines: string[] = [];
+
+  normalizedSections.forEach((section, index) => {
+    if (index > 0) {
+      bodyLines.push(...Array.from({length: sectionGap}, () => ''));
+    }
+
+    const lines = section.split('\n');
+    const centeredLines = index === 0
+      ? centerPreservedBlock(lines, columns)
+      : centerLines(lines, lines.length, columns, align);
+
+    bodyLines.push(...centeredLines);
+  });
+
+  const visibleBodyLines = bodyLines.slice(0, usableRows);
+  const topPad = Math.max(Math.floor((usableRows - visibleBodyLines.length) / 2), 0);
+  const frameLines: string[] = [
+    ...(headerLines.length > 0 ? [''] : []),
+    ...headerLines,
+    ...(headerLines.length > 0 ? [''] : []),
+    ...Array.from({length: topPad}, () => ''),
+    ...visibleBodyLines
+  ];
+
+  while (frameLines.length < rows - reservedFooterRows) {
+    frameLines.push('');
+  }
+
+  if (footerLines.length > 0) {
+    frameLines.push('');
+    frameLines.push(...footerLines);
   }
 
   return frameLines.join('\n');

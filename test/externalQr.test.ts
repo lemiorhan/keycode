@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {
   ensureQrImage,
   overlayFrame,
+  overlayFrameAtCell,
   overlayFrameInPane,
   overlayTopLeft,
   paneBounds,
@@ -89,6 +90,33 @@ test('overlayFrame places an image on the left and centers it vertically', () =>
   assert.equal(frame.width, 228);
   assert.equal(frame.height, 114);
   assert.equal(frame.top, 333);
+});
+
+test('overlayFrameAtCell centers an image around the requested terminal cell', () => {
+  const frame = overlayFrameAtCell(
+    {
+      left: 100,
+      top: 80,
+      right: 900,
+      bottom: 700
+    },
+    {
+      intrinsicWidth: 1200,
+      intrinsicHeight: 600,
+      widthPercent: 30,
+      anchorRow: 10,
+      anchorColumn: 20,
+      terminalRows: 24,
+      terminalColumns: 80
+    }
+  );
+
+  assert.equal(frame.width, 228);
+  assert.equal(frame.height, 114);
+  assert.equal(frame.left >= 120, true);
+  assert.equal(frame.left <= 660, true);
+  assert.equal(frame.top >= 100, true);
+  assert.equal(frame.top <= 566, true);
 });
 
 test('paneBounds returns the selected left or right pane bounds', () => {

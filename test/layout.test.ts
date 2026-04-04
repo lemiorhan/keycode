@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {centerTextBlock, composeBottomRightOverlayLayout, composeTwoScreenLayout} from '../src/layout.js';
+import {
+  centerStackedSections,
+  centerTextBlock,
+  composeBottomRightOverlayLayout,
+  composeTwoScreenLayout
+} from '../src/layout.js';
 
 test('centerTextBlock centers a short block with a hint line', () => {
   const output = centerTextBlock('Hello', {
@@ -222,4 +227,17 @@ test('composeTwoScreenLayout places header content at the top before split panes
   assert.equal(lines[1], '       HEADER');
   assert.equal(lines[2], '');
   assert.equal(lines.some((line, index) => index >= 3 && line.includes('Hello')), true);
+});
+
+test('centerStackedSections preserves ascii art shape while centering it as a block', () => {
+  const output = centerStackedSections([' /\\_/\\\\\n( o.o )\n > ^ <', 'Caption'], {
+    rows: 8,
+    columns: 30,
+    align: 'center'
+  });
+  const lines = output.split('\n').filter((line) => line.trim().length > 0);
+
+  assert.equal(lines[0], '            /\\_/\\\\');
+  assert.equal(lines[1], '           ( o.o )');
+  assert.equal(lines[2], '            > ^ <');
 });

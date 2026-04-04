@@ -1,9 +1,10 @@
 import stringWidth from 'string-width';
-import {renderInlineColors} from './colorText.js';
+import {renderInlineColors, stripColorTags} from './colorText.js';
 import type {SlideAlign} from './types.js';
 
 const PARAGRAPH_TAG_PATTERN = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
-const COLOR_TAG_PATTERN = /<color\s+fg="(?:red|green|yellow|blue|magenta|cyan|white|gray)">|<\/color>/gi;
+const COLOR_TAG_TOKEN_PATTERN =
+  /<color\s+fg=(?:"|')(?:red|green|yellow|blue|magenta|cyan|white|gray)(?:"|')>|<\/color>|\s+|[^\s<]+|</gi;
 
 interface ParagraphAttributes {
   align: SlideAlign;
@@ -11,7 +12,7 @@ interface ParagraphAttributes {
 }
 
 function visibleWidth(value: string): number {
-  return stringWidth(value.replace(COLOR_TAG_PATTERN, ''));
+  return stringWidth(stripColorTags(value));
 }
 
 function parseAttributes(attributesText: string): ParagraphAttributes {
@@ -25,7 +26,7 @@ function parseAttributes(attributesText: string): ParagraphAttributes {
 }
 
 function tokenizeMarkup(content: string): string[] {
-  const tokens = content.match(/<color\s+fg="(?:red|green|yellow|blue|magenta|cyan|white|gray)">|<\/color>|\s+|[^\s<]+|</gi);
+  const tokens = content.match(COLOR_TAG_TOKEN_PATTERN);
   return tokens ?? [];
 }
 

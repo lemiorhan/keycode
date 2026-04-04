@@ -1,5 +1,6 @@
 const IMAGE_TAG_PATTERN = /<image\b(?!-url)([^>]*)\/?>/i;
 const DEFAULT_IMAGE_WIDTH_PERCENT = 30;
+export const IMAGE_ANCHOR_TOKEN = '__KEYCODE_IMAGE_ANCHOR__';
 
 export function extractImageTag(
   content: string
@@ -30,7 +31,7 @@ export function extractImageTag(
   ).trim();
   const widthPercent = Number(widthMatch?.[1] ?? DEFAULT_IMAGE_WIDTH_PERCENT);
   const body = content
-    .replace(IMAGE_TAG_PATTERN, '\n')
+    .replace(IMAGE_TAG_PATTERN, IMAGE_ANCHOR_TOKEN)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 

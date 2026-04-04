@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseSlides} from '../src/parser.js';
+import {IMAGE_ANCHOR_TOKEN} from '../src/imageTag.js';
 
 test('parseSlides splits on separators and preserves multiline content', () => {
   const deck = parseSlides(`
@@ -45,6 +46,17 @@ What do you think?
   assert.equal(deck.slides[0]?.body, 'Ask the room:\nWhat do you think?');
 });
 
+test('parseSlides ignores lines that start with double-slash comments', () => {
+  const deck = parseSlides(`
+Visible line
+// Hidden line
+  // Hidden indented line
+Still visible
+`);
+
+  assert.equal(deck.slides[0]?.body, 'Visible line\nStill visible');
+});
+
 test('parseSlides strips image-url blocks from slide body', () => {
   const deck = parseSlides(`
 <image-url>
@@ -65,7 +77,7 @@ About the speaker
   assert.equal(deck.slides[0]?.imagePath, 'lemi.png');
   assert.equal(deck.slides[0]?.imageWidthPercent, 35);
   assert.equal(deck.slides[0]?.imageBackgroundColor, '#111111');
-  assert.equal(deck.slides[0]?.body, 'About the speaker');
+  assert.equal(deck.slides[0]?.body, `${IMAGE_ANCHOR_TOKEN}\nAbout the speaker`);
 });
 
 test('parseSlides extracts screen tags and removes them from body content', () => {
