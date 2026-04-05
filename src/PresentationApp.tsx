@@ -141,6 +141,7 @@ export function PresentationApp({
   const aiSimulationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previousSlideIndexRef = useRef<number | null>(null);
   const externalMediaViewerRef = useRef(new ExternalMediaViewer());
+  const inlineImageAnchorRef = useRef<{row: number; column: number} | undefined>(undefined);
   const blinkVisible = useBlinkCursor();
   const currentSlide = slides[slideIndex];
   const currentAiSimulationState = aiSimulationStates[slideIndex];
@@ -393,6 +394,7 @@ export function PresentationApp({
     () => extractImageAnchor(frameWithScreens),
     [frameWithScreens]
   );
+  inlineImageAnchorRef.current = inlineImageAnchor;
   const displayedFrame =
     isTransitioning || aiSimulationRunning || jumpModeActive
       ? anchoredFrame
@@ -537,7 +539,7 @@ export function PresentationApp({
                     screens: screenPair
                   }
                 : {
-                    anchorRow: Math.max((inlineImageAnchor?.row ?? Math.floor(rows / 2)) - 2, 0),
+                    anchorRow: Math.max((inlineImageAnchorRef.current?.row ?? Math.floor(rows / 2)) - 2, 0),
                     anchorColumn: Math.floor(columns / 2),
                     terminalRows: rows,
                     terminalColumns: columns
@@ -581,7 +583,6 @@ export function PresentationApp({
     currentSlide?.imageWidthPercent,
     currentSlide?.imageBackgroundColor,
     currentSlide?.screens,
-    inlineImageAnchor?.row,
     currentSlide?.qrText,
     currentSlide?.qrColors,
     currentSlide?.qrWidthPercent,

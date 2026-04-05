@@ -87,7 +87,7 @@ function wrapParagraphMarkup(content: string, maxWidth: number, align: SlideAlig
     }
 
     const closed = `${current}${closeOpenColors(colorStack.length)}`;
-    lines.push(renderInlineColors(alignLine(closed, maxWidth, align)));
+    lines.push(renderInlineColors(closed));
     current = openActiveColors(colorStack);
     currentWidth = 0;
     pendingSpace = false;
@@ -141,7 +141,14 @@ function wrapParagraphMarkup(content: string, maxWidth: number, align: SlideAlig
     return lines;
   });
 
-  return wrappedLines.join('\n');
+  const longestLineWidth = Math.max(...wrappedLines.map((line) => stringWidth(line)), 0);
+  const effectiveWidth = align === 'left'
+    ? Math.min(maxWidth, longestLineWidth)
+    : maxWidth;
+
+  return wrappedLines
+    .map((line) => alignLine(line, effectiveWidth, align))
+    .join('\n');
 }
 
 export function renderParagraphBlocks(content: string): string {

@@ -5,6 +5,7 @@ import {renderParagraphBlocks} from './paragraphTag.js';
 import {applyRevealLines} from './revealLines.js';
 import {renderHeaderAscii, renderTitleAscii} from './titleArt.js';
 
+const WHITE = '\x1b[37m';
 const FOOTNOTE_COLOR = '\x1b[90m';
 const ANSI_RESET = '\x1b[39m';
 const DECORATION_COLOR = '\x1b[90m';
@@ -122,7 +123,7 @@ export function renderSlideTextContent(options: RenderSlideOptions): string {
     sections.push(decoration.bottom);
   }
 
-  return sections.join('\n\n').replace(/\n+$/u, '');
+  return `${WHITE}${sections.join('\n\n').replace(/\n+$/u, '')}${ANSI_RESET}`;
 }
 
 export function renderSlideHeader(slide: Slide): string | undefined {
@@ -130,7 +131,7 @@ export function renderSlideHeader(slide: Slide): string | undefined {
     return undefined;
   }
 
-  return renderHeaderAscii(slide.headerText, slide.headerColor);
+  return `${WHITE}${renderHeaderAscii(slide.headerText, slide.headerColor)}${ANSI_RESET}`;
 }
 
 export function renderSlideFootnote(slide: Slide): string | undefined {

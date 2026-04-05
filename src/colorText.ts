@@ -20,7 +20,7 @@ const ANSI_COLORS: Record<string, string> = {
   gray: '\x1b[90m'
 };
 
-const ANSI_RESET = '\x1b[39m';
+const ANSI_RESET = '\x1b[37m';
 
 export function stripColorTags(content: string): string {
   return content.replace(COLOR_TAG_MARKUP_PATTERN, '');
