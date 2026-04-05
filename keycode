@@ -17,6 +17,14 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
 
+# ── Load .env ──
+
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
 # ── Usage ──
 
 usage() {
@@ -107,9 +115,10 @@ else
   usage
 fi
 
-# If arg contains no '/', treat as a deck name under decks/
+# If arg contains no '/', treat as a deck name under DECK_SOURCE_PATH (or decks/)
 if [[ "$ARG" != */* ]]; then
-  DECK_DIR="$SCRIPT_DIR/decks/$ARG"
+  DECK_BASE="${DECK_SOURCE_PATH:-$SCRIPT_DIR/decks}"
+  DECK_DIR="$DECK_BASE/$ARG"
 else
   DECK_DIR="$ARG"
 fi

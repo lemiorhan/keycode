@@ -60,14 +60,19 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard let image = NSImage(contentsOfFile: imagePath),
-              let screen = NSScreen.main ?? NSScreen.screens.first else {
+        guard let image = NSImage(contentsOfFile: imagePath) else {
             NSApp.terminate(nil)
             return
         }
 
-        let screenHeight = screen.frame.height
-        let appKitY = screenHeight - top - height
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+
+        guard primaryHeight > 0 else {
+            NSApp.terminate(nil)
+            return
+        }
+
+        let appKitY = primaryHeight - top - height
         let frame = NSRect(x: left, y: appKitY, width: width, height: height)
 
         let panel = NSPanel(
