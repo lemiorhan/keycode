@@ -478,7 +478,8 @@ Displays an external image as a native macOS overlay window.
 
 **Interactions:**
 - When combined with two `<screen>` tags, the image is shown in the first (left) screen pane and horizontally centered there.
-- Without `<screen>` tags, the image is positioned inline with an anchor-based layout.
+- When the slide contains **only an image** (no body text), the image is centered both vertically and horizontally in the terminal viewport.
+- When the slide contains an image **and** body text, the image is positioned inline with an anchor-based layout and text appears below the image area.
 - Cannot coexist with `<qr>` on the same slide.
 
 ---

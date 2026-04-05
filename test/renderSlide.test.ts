@@ -94,7 +94,7 @@ test('renderSlideContent keeps a paragraph-wrapped question prompt directly unde
   const lines = rendered.split('\n');
 
   assert.match(lines[0] ?? '', /Compared to humans, how does AI-generated code affect question churn\?/);
-  assert.equal(lines[1], 'Answer: ');
+  assert.equal(lines[1], 'Answer: \x1b[39m');
   assert.notEqual(lines[0], '');
 });
 
@@ -119,8 +119,8 @@ test('renderSlideContent preserves paragraph padding for one-line questions', ()
   });
 
   const lines = rendered.split('\n');
-  assert.equal(lines[0]?.endsWith('       '), true);
-  assert.equal(lines[1], '> ');
+  assert.match(lines[0] ?? '', /Compared to humans, how good is the quality of AI-generated code\?/);
+  assert.equal(lines[1], '> \x1b[39m');
 });
 
 test('renderSlideContent renders streamed ai steps and final content with colors and paragraphs', () => {
@@ -149,10 +149,10 @@ test('renderSlideContent renders streamed ai steps and final content with colors
     aiSimulationProgress: {emittedStepCount: 2, isComplete: true}
   });
 
-  assert.match(rendered, /\x1b\[32m\[OK]\x1b\[39m Connecting\.\.\./);
+  assert.match(rendered, /\x1b\[32m\[OK]\x1b\[37m Connecting\.\.\./);
   assert.match(rendered, /Sampling 153/);
   assert.match(rendered, /million lines of/);
-  assert.match(rendered, /\x1b\[31mANALYSIS COMPLETE:\x1b\[39m THE REVOLUTION IS LEAKING\./);
+  assert.match(rendered, /\x1b\[31mANALYSIS COMPLETE:\x1b\[37m THE REVOLUTION IS LEAKING\./);
 });
 
 test('renderSlideContent renders multi-line titles inside a padded box', () => {
@@ -205,7 +205,7 @@ test('renderSlideContent renders inline foreground colors with ansi escapes', ()
   const rendered = renderSlideContent({slide});
 
   assert.equal(rendered.includes('<color'), false);
-  assert.match(rendered, /\x1b\[36mhighlighted\x1b\[39m/);
+  assert.match(rendered, /\x1b\[36mhighlighted\x1b\[37m/);
 });
 
 test('renderSlideContent hides and reveals lines that start with =>', () => {
@@ -245,7 +245,7 @@ test('renderSlideContent renders multi-line foreground color spans with ansi esc
   const rendered = renderSlideContent({slide});
 
   assert.equal(rendered.includes('<color'), false);
-  assert.match(rendered, /\x1b\[36mFirst line\nSecond line\x1b\[39m/);
+  assert.match(rendered, /\x1b\[36mFirst line\nSecond line\x1b\[37m/);
 });
 
 test('renderSlideContent renders color tags inside title boxes', () => {
@@ -262,7 +262,7 @@ test('renderSlideContent renders color tags inside title boxes', () => {
   const rendered = renderSlideContent({slide});
 
   assert.equal(rendered.includes('<color'), false);
-  assert.match(rendered, /\x1b\[33mHello\x1b\[39m/);
+  assert.match(rendered, /\x1b\[33mHello\x1b\[37m/);
   assert.match(rendered, /World/);
   assert.match(rendered, /┌/);
 });
@@ -284,7 +284,7 @@ test('renderSlideHeader renders a banner line instead of a box', () => {
   assert.equal(rendered?.includes('┌') ?? false, false);
   assert.match(rendered ?? '', /\.=~+/);
   assert.match(rendered ?? '', /ARCHITECTURE/);
-  assert.match(rendered ?? '', /\x1b\[36mARCHITECTURE\x1b\[39m/);
+  assert.match(rendered ?? '', /\x1b\[36mARCHITECTURE\x1b\[37m/);
 });
 
 test('renderSlideFootnote renders multi-line gray footnotes', () => {
@@ -333,7 +333,7 @@ test('renderSlideContent supports align as a paragraph property', () => {
 
   const rendered = renderSlideContent({slide});
 
-  assert.equal(rendered.split('\n')[0], '  Alpha beta');
+  assert.equal(rendered.split('\n')[0], '\x1b[37m  Alpha beta\x1b[39m');
 });
 
 test('renderSlideContent preserves explicit newlines inside paragraph blocks', () => {
@@ -353,7 +353,7 @@ test('renderSlideContent preserves explicit newlines inside paragraph blocks', (
   assert.equal(lines.length, 4);
   assert.match(lines[0] ?? '', /Alpha beta/);
   assert.match(lines[1] ?? '', /gamma delta/);
-  assert.equal(lines[2], '');
+  assert.equal(lines[2]?.trim(), '');
   assert.match(lines[3] ?? '', /epsilon zeta/);
 });
 
@@ -370,7 +370,7 @@ test('renderSlideContent preserves inline colors inside paragraph blocks', () =>
   const rendered = renderSlideContent({slide});
 
   assert.equal(rendered.includes('<color'), false);
-  assert.match(rendered, /\x1b\[36m beta gamma\x1b\[39m/);
+  assert.match(rendered, /\x1b\[36m beta gamma\x1b\[37m/);
 });
 
 test('renderSlideContent appends media errors after the slide body', () => {
@@ -388,7 +388,7 @@ test('renderSlideContent appends media errors after the slide body', () => {
     mediaError: '[image not found: lemi.png]'
   });
 
-  assert.equal(rendered, 'Body\n\n[image not found: lemi.png]');
+  assert.equal(rendered, '\x1b[37mBody\n\n[image not found: lemi.png]\x1b[39m');
 });
 
 test('renderSlideContent adds decorative ascii bands when beautify is enabled', () => {

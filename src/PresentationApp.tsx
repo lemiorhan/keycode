@@ -85,9 +85,7 @@ function reserveInlineImageSpace(content: string, spacerRows: number): string {
     return content;
   }
 
-  const topRows = Math.floor((spacerRows - 1) / 2);
-  const bottomRows = spacerRows - 1 - topRows;
-  const replacement = `${'\n'.repeat(topRows)}${IMAGE_ANCHOR_TOKEN}${'\n'.repeat(bottomRows)}`;
+  const replacement = `${'\n'.repeat(spacerRows - 1)}${IMAGE_ANCHOR_TOKEN}`;
   return content.replace(IMAGE_ANCHOR_TOKEN, replacement);
 }
 
@@ -538,12 +536,17 @@ export function PresentationApp({
                     panePosition: 'left' as const,
                     screens: screenPair
                   }
-                : {
-                    anchorRow: Math.max((inlineImageAnchorRef.current?.row ?? Math.floor(rows / 2)) - 2, 0),
-                    anchorColumn: Math.floor(columns / 2),
-                    terminalRows: rows,
-                    terminalColumns: columns
-                  })
+                : currentSlide.body.replace(IMAGE_ANCHOR_TOKEN, '').trim().length === 0
+                  ? {
+                      position: 'center' as const,
+                      align: 'center' as const
+                    }
+                  : {
+                      anchorRow: Math.max((inlineImageAnchorRef.current?.row ?? Math.floor(rows / 2)) - inlineImageSpacerRows + Math.floor(inlineImageSpacerRows / 2), 0),
+                      anchorColumn: Math.floor(columns / 2),
+                      terminalRows: rows,
+                      terminalColumns: columns
+                    })
             });
           }
         })

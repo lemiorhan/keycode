@@ -86,16 +86,15 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         panel.hidesOnDeactivate = false
         panel.backgroundColor = panelBackgroundColor()
         panel.isOpaque = panel.backgroundColor != .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.ignoresMouseEvents = true
 
         let imageView = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.imageFrameStyle = .none
         imageView.wantsLayer = true
-        imageView.layer?.cornerRadius = 14
-        imageView.layer?.masksToBounds = true
         panel.contentView = imageView
 
         self.panel = panel

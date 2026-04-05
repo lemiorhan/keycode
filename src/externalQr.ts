@@ -80,7 +80,7 @@ interface OverlayFrameOptions {
   intrinsicWidth: number;
   intrinsicHeight: number;
   widthPercent: number;
-  position: SlideSide;
+  position: SlideSide | 'center';
   align: OverlayAlign;
 }
 
@@ -107,7 +107,9 @@ export function overlayFrame(bounds: WindowBounds, options: OverlayFrameOptions)
   const left =
     options.position === 'left'
       ? bounds.left + OVERLAY_WINDOW_MARGIN
-      : bounds.right - width - OVERLAY_WINDOW_MARGIN;
+      : options.position === 'center'
+        ? bounds.left + Math.max(Math.floor((bounds.right - bounds.left - width) / 2), 0)
+        : bounds.right - width - OVERLAY_WINDOW_MARGIN;
   const top =
     options.align === 'top'
       ? bounds.top + OVERLAY_WINDOW_MARGIN
