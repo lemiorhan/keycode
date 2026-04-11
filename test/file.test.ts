@@ -29,7 +29,7 @@ test('readDeckDirectory uses alphabetical order when no .index file exists', asy
     assert.ok(sldFiles[0].endsWith('alpha.sld'));
     assert.ok(sldFiles[1].endsWith('beta.sld'));
     assert.ok(sldFiles[2].endsWith('gamma.sld'));
-    assert.equal(source, 'Slide A\nSlide B\nSlide G');
+    assert.equal(source, 'Slide A\n\n---\nSlide B\n\n---\nSlide G\n\n---');
   } finally {
     await rm(dir, {recursive: true});
   }
@@ -49,7 +49,7 @@ test('readDeckDirectory uses .index file order when it exists', async () => {
     assert.ok(sldFiles[0].endsWith('gamma.sld'));
     assert.ok(sldFiles[1].endsWith('beta.sld'));
     assert.ok(sldFiles[2].endsWith('alpha.sld'));
-    assert.equal(source, 'Slide G\nSlide B\nSlide A');
+    assert.equal(source, 'Slide G\n\n---\nSlide B\n\n---\nSlide A\n\n---');
   } finally {
     await rm(dir, {recursive: true});
   }
@@ -67,7 +67,7 @@ test('readDeckDirectory ignores blank lines and whitespace in .index', async () 
     assert.equal(sldFiles.length, 2);
     assert.ok(sldFiles[0].endsWith('first.sld'));
     assert.ok(sldFiles[1].endsWith('second.sld'));
-    assert.equal(source, 'First\nSecond');
+    assert.equal(source, 'First\n\n---\nSecond\n\n---');
   } finally {
     await rm(dir, {recursive: true});
   }
@@ -102,7 +102,21 @@ test('readDeckDirectory .index can include subset of available files', async () 
     assert.equal(sldFiles.length, 2);
     assert.ok(sldFiles[0].endsWith('beta.sld'));
     assert.ok(sldFiles[1].endsWith('alpha.sld'));
-    assert.equal(source, 'Slide B\nSlide A');
+    assert.equal(source, 'Slide B\n\n---\nSlide A\n\n---');
+  } finally {
+    await rm(dir, {recursive: true});
+  }
+});
+
+test('readDeckDirectory does not double-append separator when file already ends with ---', async () => {
+  const dir = await createTempDeck({
+    'alpha.sld': 'Slide A\n\n---',
+    'beta.sld': 'Slide B'
+  });
+
+  try {
+    const {source} = await readDeckDirectory(dir);
+    assert.equal(source, 'Slide A\n\n---\nSlide B\n\n---');
   } finally {
     await rm(dir, {recursive: true});
   }
@@ -119,7 +133,7 @@ test('readDeckDirectory ignores non-.sld files when no .index exists', async () 
     const {source, sldFiles} = await readDeckDirectory(dir);
     assert.equal(sldFiles.length, 1);
     assert.ok(sldFiles[0].endsWith('alpha.sld'));
-    assert.equal(source, 'Slide A');
+    assert.equal(source, 'Slide A\n\n---');
   } finally {
     await rm(dir, {recursive: true});
   }

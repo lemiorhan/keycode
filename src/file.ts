@@ -35,5 +35,8 @@ export async function readDeckDirectory(deckDir: string): Promise<{source: strin
   }
 
   const contents = await Promise.all(sldFiles.map((f) => readFile(f, 'utf8')));
-  return {source: contents.join('\n'), sldFiles};
+  const normalizedContents = contents.map((c) =>
+    /^---\s*$/m.test(c.trimEnd().split('\n').pop() ?? '') ? c : `${c.trimEnd()}\n\n---`
+  );
+  return {source: normalizedContents.join('\n'), sldFiles};
 }
