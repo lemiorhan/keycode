@@ -26,10 +26,12 @@ function PresentationRoot({
   useEffect(() => {
     const sldWatchers: FSWatcher[] = [];
     let imagesWatcher: FSWatcher | undefined;
+    let indexWatcher: FSWatcher | undefined;
     let disposed = false;
     let reloadTimer: NodeJS.Timeout | undefined;
 
     const imagesDirectory = resolve(deckDirectory, 'images');
+    const indexPath = resolve(deckDirectory, '.index');
 
     const clearTimer = (): void => {
       if (reloadTimer) {
@@ -77,6 +79,12 @@ function PresentationRoot({
       });
     }
 
+    if (existsSync(indexPath)) {
+      indexWatcher = watch(indexPath, () => {
+        scheduleReload();
+      });
+    }
+
     return () => {
       disposed = true;
       clearTimer();
@@ -84,6 +92,7 @@ function PresentationRoot({
         w.close();
       }
       imagesWatcher?.close();
+      indexWatcher?.close();
     };
   }, [deckDirectory, initialSldFiles]);
 

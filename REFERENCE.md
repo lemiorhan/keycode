@@ -39,20 +39,31 @@
 ## File Structure
 
 - All decks live under the **`decks/`** folder in the project root.
-- Each deck is a subfolder containing one or more UTF-8 **`.sld`** files and an optional **`images/`** subfolder.
-- All `.sld` files in a deck directory are **sorted alphabetically** and concatenated into a single continuous presentation.
-- Use a numbered prefix convention (e.g. `01-intro.sld`, `02-main.sld`) to control ordering.
+- Each deck is a subfolder containing one or more UTF-8 **`.sld`** files, an optional **`.index`** file, and an optional **`images/`** subfolder.
+- **Slide ordering** is determined by the `.index` file:
+  - If a **`.index`** file exists, its lines define the order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored.
+  - If **no `.index`** file exists, `.sld` files are **sorted alphabetically** and concatenated.
+- The `.index` file is watched for changes and triggers a live reload.
 - Typical structure:
 
 ```
 decks/
   my-talk/
-    01-intro.sld
-    02-main.sld
-    03-closing.sld
+    .index          # optional: controls slide order
+    intro.sld
+    main.sld
+    closing.sld
     images/
       logo.png
       photo.jpg
+```
+
+- Example `.index` file:
+
+```
+intro
+main
+closing
 ```
 
 - Run by deck name: `./keycode present my-talk` (resolves to `decks/my-talk/`).
@@ -773,8 +784,8 @@ If content exceeds the terminal dimensions:
 
 ## Live Reload
 
-The presentation watches the `.sld` file and the `images/` folder for changes:
-- When the file is modified, the deck is re-parsed and re-rendered automatically (120ms debounce).
+The presentation watches `.sld` files, the `images/` folder, and the `.index` file for changes:
+- When any watched file is modified, the deck is re-parsed and re-rendered automatically (120ms debounce).
 - The current slide index is preserved (clamped to the new slide count if needed).
 - Image/media overlays are refreshed on reload.
 - If the reload fails (e.g., syntax error), a status message is shown at the bottom.

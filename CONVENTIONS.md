@@ -30,7 +30,7 @@ src/                 # TypeScript source
   renderSlide.ts     # Slide text rendering
   file.ts            # File I/O utilities
 test/                # Test files (*.<name>.test.ts)
-decks/               # Deck directories (each contains .sld files + images/)
+decks/               # Deck directories (each contains .sld files + optional .index + images/)
 macos/               # macOS-specific native code (Swift)
 REFERENCE.md         # Complete slide format documentation
 ```
@@ -100,6 +100,13 @@ Each slide tag has a dedicated `*Tag.ts` module that exports an `extract*` funct
 - `REFERENCE.md` is the complete slide format reference. Update it when adding or changing slide tags.
 - `README.md` covers installation, usage, and development.
 - Do not add inline comments unless they explain non-obvious logic. The code should be self-documenting.
+
+## Deck Slide Ordering (.index)
+
+Each deck directory may contain an `.index` file to control the order of `.sld` files:
+- If `.index` exists, its lines define the slide order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored.
+- If `.index` does not exist, `.sld` files are loaded in alphabetical order.
+- The `.index` file is watched for changes and triggers a live reload.
 
 ## General Rules
 
