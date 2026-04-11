@@ -651,6 +651,11 @@ export function PresentationApp({
       return;
     }
 
+    if (input === 'p' && showPresenterNotes && !questionInputEnabled) {
+      presenterNotesViewerRef.current.toggle();
+      return;
+    }
+
     if (jumpModeActive) {
       if (key.escape) {
         setJumpInput(undefined);

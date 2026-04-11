@@ -95,6 +95,7 @@ export function renderPresenterNotes(notes: string): string {
 
 export class PresenterNotesViewer {
   private child: ChildProcess | null = null;
+  private visible = true;
 
   open(): void {
     if (process.platform !== 'darwin' || this.child) {
@@ -161,6 +162,42 @@ export class PresenterNotesViewer {
 
     try {
       this.child.stdin.write(`${content}\n---END---\n`);
+    } catch {
+      // stdin may be closed if the process exited.
+    }
+  }
+
+  hide(): void {
+    this.sendCommand('---HIDE---');
+    this.visible = false;
+  }
+
+  show(): void {
+    this.sendCommand('---SHOW---');
+    this.visible = true;
+  }
+
+  toggle(): boolean {
+    if (this.visible) {
+      this.hide();
+    } else {
+      this.show();
+    }
+
+    return this.visible;
+  }
+
+  isVisible(): boolean {
+    return this.visible;
+  }
+
+  private sendCommand(command: string): void {
+    if (!this.child || !this.child.stdin || this.child.stdin.destroyed) {
+      return;
+    }
+
+    try {
+      this.child.stdin.write(`${command}\n---END---\n`);
     } catch {
       // stdin may be closed if the process exited.
     }

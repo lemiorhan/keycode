@@ -112,27 +112,19 @@ final class NotesController: NSObject, NSApplicationDelegate {
         panel.minSize = NSSize(width: 200, height: 120)
         panel.isMovableByWindowBackground = true
 
-        let inset: CGFloat = 16
-        let innerFrame = NSRect(
-            x: inset,
-            y: inset,
-            width: frame.width - inset * 2,
-            height: frame.height - inset * 2
-        )
-
-        let scrollView = NSScrollView(frame: innerFrame)
+        let scrollView = NSScrollView(frame: panel.contentView!.bounds)
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autoresizingMask = [.width, .height]
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
 
-        let textView = NSTextView(frame: innerFrame)
+        let textView = NSTextView(frame: scrollView.bounds)
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
-        textView.textContainerInset = NSSize(width: 0, height: 0)
-        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainerInset = NSSize(width: 14, height: 14)
+        textView.textContainer?.lineFragmentPadding = 4
         textView.textContainer?.widthTracksTextView = true
 
         scrollView.documentView = textView
@@ -174,11 +166,27 @@ final class NotesController: NSObject, NSApplicationDelegate {
                     buffer = String(buffer[separatorRange.upperBound...])
 
                     DispatchQueue.main.async { [weak self] in
-                        self?.updateContent(message)
+                        self?.handleMessage(message)
                     }
                 }
             }
         }
+    }
+
+    private func handleMessage(_ message: String) {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed == "---HIDE---" {
+            panel?.orderOut(nil)
+            return
+        }
+
+        if trimmed == "---SHOW---" {
+            panel?.orderFrontRegardless()
+            return
+        }
+
+        updateContent(message)
     }
 
     private func updateContent(_ text: String) {
