@@ -22,7 +22,7 @@ Second line of notes.
 */`;
 
   const result = extractPresenterNotes(raw);
-  assert.equal(result, 'First line of notes.\nSecond line of notes.');
+  assert.equal(result, 'First line of notes. Second line of notes.');
 });
 
 test('extractPresenterNotes trims leading and trailing blank lines', () => {
@@ -34,7 +34,7 @@ Trailing blank line below.
 */`;
 
   const result = extractPresenterNotes(raw);
-  assert.equal(result, 'Leading blank line above.\nTrailing blank line below.');
+  assert.equal(result, 'Leading blank line above. Trailing blank line below.');
 });
 
 test('extractPresenterNotes preserves color tags in notes', () => {
@@ -62,7 +62,7 @@ Another line.
 */`;
 
   const result = extractPresenterNotes(raw);
-  assert.equal(result, 'Line with trailing spaces.\nAnother line.');
+  assert.equal(result, 'Line with trailing spaces. Another line.');
 });
 
 test('parseSlides extracts presenterNotes per slide', () => {
@@ -101,6 +101,68 @@ Secret notes.
   const deck = parseSlides(source);
   assert.equal(deck.slides[0].body.includes('Secret notes'), false);
   assert.equal(deck.slides[0].body.includes('PRESENTER NOTES'), false);
+});
+
+test('extractPresenterNotes collapses single newlines but preserves double newlines', () => {
+  const raw = `/* PRESENTER NOTES:
+First paragraph line one.
+First paragraph line two.
+
+Second paragraph line one.
+Second paragraph line two.
+*/`;
+
+  const result = extractPresenterNotes(raw);
+  assert.equal(result, 'First paragraph line one. First paragraph line two.\n\nSecond paragraph line one. Second paragraph line two.');
+});
+
+test('extractPresenterNotes preserves triple newlines as double newline', () => {
+  const raw = `/* PRESENTER NOTES:
+Paragraph one.
+
+
+Paragraph two.
+*/`;
+
+  const result = extractPresenterNotes(raw);
+  assert.equal(result, 'Paragraph one.\n\nParagraph two.');
+});
+
+test('extractPresenterNotes converts * lines to bullet points', () => {
+  const raw = `/* PRESENTER NOTES:
+* First bullet
+* Second bullet
+* Third bullet
+*/`;
+
+  const result = extractPresenterNotes(raw);
+  assert.equal(result, '• First bullet\n• Second bullet\n• Third bullet');
+});
+
+test('extractPresenterNotes mixes paragraphs and bullet points', () => {
+  const raw = `/* PRESENTER NOTES:
+This is an intro paragraph
+that wraps to a second line.
+
+* Bullet one
+* Bullet two
+
+Closing paragraph.
+*/`;
+
+  const result = extractPresenterNotes(raw);
+  assert.equal(result, 'This is an intro paragraph that wraps to a second line.\n\n• Bullet one\n• Bullet two\n\nClosing paragraph.');
+});
+
+test('extractPresenterNotes collapses continuation line into bullet', () => {
+  const raw = `/* PRESENTER NOTES:
+* A long bullet point
+that continues on the next line.
+* Short bullet
+*/`;
+
+  const result = extractPresenterNotes(raw);
+  assert.equal(result, '• A long bullet point that continues on the next line.\n• Short bullet');
 });
 
 test('parseSlides preserves non-presenter block comments behavior', () => {

@@ -7,10 +7,31 @@ export function extractPresenterNotes(raw: string): string | undefined {
     return undefined;
   }
 
-  return match[1]
+  const trimmed = match[1]
     .replace(/^\n+/, '')
-    .replace(/\n+$/, '')
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .join('\n');
+    .replace(/\n+$/, '');
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lines = paragraph
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      const result: string[] = [];
+
+      for (const line of lines) {
+        if (/^\*\s/.test(line)) {
+          result.push(`• ${line.slice(1).trim()}`);
+        } else if (result.length > 0) {
+          result[result.length - 1] = `${result[result.length - 1]} ${line}`;
+        } else {
+          result.push(line);
+        }
+      }
+
+      return result.join('\n');
+    })
+    .join('\n\n');
 }

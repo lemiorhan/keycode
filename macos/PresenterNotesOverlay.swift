@@ -5,14 +5,42 @@ struct ColorSpan {
     let range: NSRange
 }
 
+final class ZoomableScrollView: NSScrollView {
+    var onZoom: ((CGFloat) -> Void)?
+
+    override func scrollWheel(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            let delta = event.scrollingDeltaY
+
+            if abs(delta) > 0.1 {
+                onZoom?(delta > 0 ? 1 : -1)
+            }
+
+            return
+        }
+
+        super.scrollWheel(with: event)
+    }
+
+    override func magnify(with event: NSEvent) {
+        if abs(event.magnification) > 0.01 {
+            onZoom?(event.magnification > 0 ? 1 : -1)
+        }
+    }
+}
+
 final class NotesController: NSObject, NSApplicationDelegate {
     private let left: CGFloat
     private let top: CGFloat
     private let width: CGFloat
     private let height: CGFloat
     private var panel: NSPanel?
-    private var scrollView: NSScrollView?
+    private var scrollView: ZoomableScrollView?
     private var textView: NSTextView?
+    private var fontSize: CGFloat = 13
+    private var lastText: String = ""
+    private static let minFontSize: CGFloat = 8
+    private static let maxFontSize: CGFloat = 40
 
     init(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat) {
         self.left = left
@@ -34,7 +62,7 @@ final class NotesController: NSObject, NSApplicationDelegate {
 
     private func parseAnsiText(_ text: String) -> NSAttributedString {
         let defaultColor = NSColor(calibratedWhite: 0.85, alpha: 1)
-        let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
 
@@ -112,12 +140,15 @@ final class NotesController: NSObject, NSApplicationDelegate {
         panel.minSize = NSSize(width: 200, height: 120)
         panel.isMovableByWindowBackground = true
 
-        let scrollView = NSScrollView(frame: panel.contentView!.bounds)
+        let scrollView = ZoomableScrollView(frame: panel.contentView!.bounds)
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autoresizingMask = [.width, .height]
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
+        scrollView.onZoom = { [weak self] direction in
+            self?.zoom(direction)
+        }
 
         let textView = NSTextView(frame: scrollView.bounds)
         textView.isEditable = false
@@ -190,6 +221,7 @@ final class NotesController: NSObject, NSApplicationDelegate {
     }
 
     private func updateContent(_ text: String) {
+        lastText = text
         guard let textView = self.textView else { return }
 
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -200,6 +232,20 @@ final class NotesController: NSObject, NSApplicationDelegate {
         let attributed = parseAnsiText(text)
         textView.textStorage?.setAttributedString(attributed)
         textView.scrollToBeginningOfDocument(nil)
+    }
+
+    private func zoom(_ direction: CGFloat) {
+        let newSize = fontSize + direction
+        fontSize = min(max(newSize, NotesController.minFontSize), NotesController.maxFontSize)
+
+        guard let textView = self.textView else { return }
+
+        if lastText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return
+        }
+
+        let attributed = parseAnsiText(lastText)
+        textView.textStorage?.setAttributedString(attributed)
     }
 }
 
