@@ -1,0 +1,211 @@
+import AppKit
+
+struct ColorSpan {
+    let color: NSColor
+    let range: NSRange
+}
+
+final class NotesController: NSObject, NSApplicationDelegate {
+    private let left: CGFloat
+    private let top: CGFloat
+    private let width: CGFloat
+    private let height: CGFloat
+    private var panel: NSPanel?
+    private var scrollView: NSScrollView?
+    private var textView: NSTextView?
+
+    init(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat) {
+        self.left = left
+        self.top = top
+        self.width = width
+        self.height = height
+    }
+
+    private static let ansiColors: [String: NSColor] = [
+        "31": NSColor(calibratedRed: 0.9, green: 0.3, blue: 0.3, alpha: 1),
+        "32": NSColor(calibratedRed: 0.3, green: 0.85, blue: 0.3, alpha: 1),
+        "33": NSColor(calibratedRed: 0.95, green: 0.85, blue: 0.3, alpha: 1),
+        "34": NSColor(calibratedRed: 0.4, green: 0.5, blue: 1, alpha: 1),
+        "35": NSColor(calibratedRed: 0.85, green: 0.4, blue: 0.85, alpha: 1),
+        "36": NSColor(calibratedRed: 0.3, green: 0.9, blue: 0.9, alpha: 1),
+        "37": NSColor.white,
+        "90": NSColor(calibratedWhite: 0.55, alpha: 1)
+    ]
+
+    private func parseAnsiText(_ text: String) -> NSAttributedString {
+        let defaultColor = NSColor(calibratedWhite: 0.85, alpha: 1)
+        let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4
+
+        let result = NSMutableAttributedString()
+        var currentColor = defaultColor
+
+        let pattern = try! NSRegularExpression(pattern: "\\x1b\\[([0-9;]*)m", options: [])
+        let nsText = text as NSString
+        var lastEnd = 0
+
+        let matches = pattern.matches(in: text, options: [], range: NSRange(location: 0, length: nsText.length))
+
+        for match in matches {
+            let matchRange = match.range
+            if matchRange.location > lastEnd {
+                let chunk = nsText.substring(with: NSRange(location: lastEnd, length: matchRange.location - lastEnd))
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .foregroundColor: currentColor,
+                    .font: font,
+                    .paragraphStyle: paragraphStyle
+                ]
+                result.append(NSAttributedString(string: chunk, attributes: attrs))
+            }
+
+            let codeRange = match.range(at: 1)
+            let code = nsText.substring(with: codeRange)
+
+            if code == "39" || code == "0" || code == "37" {
+                currentColor = defaultColor
+            } else if let color = NotesController.ansiColors[code] {
+                currentColor = color
+            }
+
+            lastEnd = matchRange.location + matchRange.length
+        }
+
+        if lastEnd < nsText.length {
+            let chunk = nsText.substring(from: lastEnd)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: currentColor,
+                .font: font,
+                .paragraphStyle: paragraphStyle
+            ]
+            result.append(NSAttributedString(string: chunk, attributes: attrs))
+        }
+
+        return result
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+
+        guard primaryHeight > 0 else {
+            NSApp.terminate(nil)
+            return
+        }
+
+        let appKitY = primaryHeight - top - height
+        let frame = NSRect(x: left, y: appKitY, width: width, height: height)
+
+        let panel = NSPanel(
+            contentRect: frame,
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.title = "Presenter Notes"
+        panel.level = .floating
+        panel.isFloatingPanel = true
+        panel.hidesOnDeactivate = false
+        panel.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 0.92)
+        panel.isOpaque = false
+        panel.hasShadow = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        panel.minSize = NSSize(width: 200, height: 120)
+        panel.isMovableByWindowBackground = true
+
+        let inset: CGFloat = 16
+        let innerFrame = NSRect(
+            x: inset,
+            y: inset,
+            width: frame.width - inset * 2,
+            height: frame.height - inset * 2
+        )
+
+        let scrollView = NSScrollView(frame: innerFrame)
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autoresizingMask = [.width, .height]
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+
+        let textView = NSTextView(frame: innerFrame)
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.textContainerInset = NSSize(width: 0, height: 0)
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+
+        scrollView.documentView = textView
+        panel.contentView = scrollView
+
+        self.panel = panel
+        self.scrollView = scrollView
+        self.textView = textView
+
+        panel.orderFrontRegardless()
+
+        readStdinAsync()
+    }
+
+    private func readStdinAsync() {
+        let handle = FileHandle.standardInput
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var buffer = ""
+
+            while true {
+                let data = handle.availableData
+
+                if data.isEmpty {
+                    DispatchQueue.main.async {
+                        NSApp.terminate(nil)
+                    }
+                    return
+                }
+
+                guard let chunk = String(data: data, encoding: .utf8) else {
+                    continue
+                }
+
+                buffer += chunk
+
+                while let separatorRange = buffer.range(of: "\n---END---\n") {
+                    let message = String(buffer[buffer.startIndex..<separatorRange.lowerBound])
+                    buffer = String(buffer[separatorRange.upperBound...])
+
+                    DispatchQueue.main.async { [weak self] in
+                        self?.updateContent(message)
+                    }
+                }
+            }
+        }
+    }
+
+    private func updateContent(_ text: String) {
+        guard let textView = self.textView else { return }
+
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            textView.textStorage?.setAttributedString(NSAttributedString(string: ""))
+            return
+        }
+
+        let attributed = parseAnsiText(text)
+        textView.textStorage?.setAttributedString(attributed)
+        textView.scrollToBeginningOfDocument(nil)
+    }
+}
+
+guard CommandLine.arguments.count >= 5 else {
+    exit(1)
+}
+
+let left = CGFloat(Double(CommandLine.arguments[1]) ?? 0)
+let top = CGFloat(Double(CommandLine.arguments[2]) ?? 0)
+let width = CGFloat(Double(CommandLine.arguments[3]) ?? 400)
+let height = CGFloat(Double(CommandLine.arguments[4]) ?? 300)
+
+let app = NSApplication.shared
+let delegate = NotesController(left: left, top: top, width: width, height: height)
+app.setActivationPolicy(.accessory)
+app.delegate = delegate
+app.run()

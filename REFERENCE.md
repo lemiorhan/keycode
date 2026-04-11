@@ -31,8 +31,9 @@
 7. [Layout Behavior](#layout-behavior)
 8. [Navigation & Controls](#navigation--controls)
 9. [Live Reload](#live-reload)
-10. [Conventions & Best Practices](#conventions--best-practices)
-11. [Complete Slide Examples](#complete-slide-examples)
+10. [Presenter Notes](#presenter-notes)
+11. [Conventions & Best Practices](#conventions--best-practices)
+12. [Complete Slide Examples](#complete-slide-examples)
 
 ---
 
@@ -114,7 +115,9 @@ C-style block comments `/* ... */` are removed, including across multiple lines.
 Visible content
 ```
 
-**Important:** Comments are stripped globally before slide splitting. A comment can span across a `---` separator, but this is not recommended.
+**Important:** Line comments are stripped before slide splitting. Block comments are stripped per-slide after splitting.
+
+**Exception:** Block comments beginning with `/* PRESENTER NOTES:` are treated specially — their content is extracted as presenter notes before the block is removed. See [Presenter Notes](#presenter-notes).
 
 ---
 
@@ -789,6 +792,35 @@ The presentation watches `.sld` files, the `images/` folder, and the `.index` fi
 - The current slide index is preserved (clamped to the new slide count if needed).
 - Image/media overlays are refreshed on reload.
 - If the reload fails (e.g., syntax error), a status message is shown at the bottom.
+
+---
+
+## Presenter Notes
+
+Slides can include presenter notes inside a specially-marked block comment. When `SHOW_PRESENTER_NOTES=true` is set in `.env` or the environment, notes are displayed in a floating overlay window that updates on each slide change.
+
+**Syntax:**
+```md
+/* PRESENTER NOTES:
+Your notes here.
+Supports <color fg="yellow">color tags</color>.
+*/
+```
+
+**Rules:**
+- The block must start with `/* PRESENTER NOTES:` (case-insensitive) and end with `*/`.
+- Notes content is extracted before the block comment is stripped, so it never appears in the slide body.
+- `<color>` tags inside notes are rendered with ANSI colors in the overlay.
+- `<p>` tags inside notes are processed for wrapping and alignment.
+- Leading/trailing blank lines and trailing whitespace per line are trimmed.
+- Only **one** presenter notes block per slide is recognized (first match wins).
+- Regular block comments (`/* ... */` without the `PRESENTER NOTES:` prefix) are stripped as usual and do not produce notes.
+- The overlay window is positioned at the bottom-left of the Terminal window with a dark semi-transparent background.
+- When there are no notes for the current slide, the overlay shows empty content.
+
+**Environment variable:**
+- `SHOW_PRESENTER_NOTES=true` — enables the floating notes overlay. Set in `.env` or pass as an environment variable.
+- Default is `false` (notes are not displayed).
 
 ---
 

@@ -94,6 +94,7 @@ Each slide tag has a dedicated `*Tag.ts` module that exports an `extract*` funct
 
 - `.env` is gitignored; `.env.example` documents required variables.
 - `DECK_SOURCE_PATH` — path to the directory containing deck folders.
+- `SHOW_PRESENTER_NOTES` — set to `true` to show presenter notes in a floating overlay window during presentation.
 
 ## Documentation
 

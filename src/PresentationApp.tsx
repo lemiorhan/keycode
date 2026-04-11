@@ -27,6 +27,7 @@ import {shouldSkipTransition} from './transitionPolicy.js';
 import {useBlinkCursor} from './useBlink.js';
 import {useQuestionInput} from './useQuestionInput.js';
 import {useSpinnerFrame} from './useSpinnerFrame.js';
+import {PresenterNotesViewer} from './presenterNotes.js';
 import stringWidth from 'string-width';
 
 interface PresentationAppProps {
@@ -34,6 +35,7 @@ interface PresentationAppProps {
   deckDirectory: string;
   mediaVersion?: number;
   statusMessage?: string;
+  showPresenterNotes?: boolean;
 }
 
 const TRANSITION_MS = 34;
@@ -116,7 +118,8 @@ export function PresentationApp({
   slides,
   deckDirectory,
   mediaVersion = 0,
-  statusMessage
+  statusMessage,
+  showPresenterNotes = false
 }: PresentationAppProps): React.JSX.Element {
   const {exit} = useApp();
   const {stdout} = useStdout();
@@ -139,6 +142,7 @@ export function PresentationApp({
   const aiSimulationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previousSlideIndexRef = useRef<number | null>(null);
   const externalMediaViewerRef = useRef(new ExternalMediaViewer());
+  const presenterNotesViewerRef = useRef(new PresenterNotesViewer());
   const inlineImageAnchorRef = useRef<{row: number; column: number} | undefined>(undefined);
   const blinkVisible = useBlinkCursor();
   const currentSlide = slides[slideIndex];
@@ -596,7 +600,34 @@ export function PresentationApp({
   ]);
 
   useEffect(() => {
+    if (!showPresenterNotes) {
+      return;
+    }
+
+    const viewer = presenterNotesViewerRef.current;
+    viewer.open();
+
+    const timer = setTimeout(() => {
+      viewer.update(currentSlide?.presenterNotes);
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [showPresenterNotes]);
+
+  useEffect(() => {
+    if (!showPresenterNotes) {
+      return;
+    }
+
+    const viewer = presenterNotesViewerRef.current;
+    viewer.update(currentSlide?.presenterNotes);
+  }, [currentSlide?.presenterNotes, showPresenterNotes, slideIndex]);
+
+  useEffect(() => {
     const viewer = externalMediaViewerRef.current;
+    const notesViewer = presenterNotesViewerRef.current;
 
     return () => {
       if (aiSimulationTimerRef.current) {
@@ -605,6 +636,7 @@ export function PresentationApp({
       }
 
       viewer.close();
+      notesViewer.close();
     };
   }, []);
 

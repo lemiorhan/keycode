@@ -12,12 +12,14 @@ interface PresentationRootProps {
   deckDirectory: string;
   initialSlides: Slide[];
   initialSldFiles: string[];
+  showPresenterNotes: boolean;
 }
 
 function PresentationRoot({
   deckDirectory,
   initialSlides,
-  initialSldFiles
+  initialSldFiles,
+  showPresenterNotes
 }: PresentationRootProps): React.JSX.Element {
   const [slides, setSlides] = useState(initialSlides);
   const [mediaVersion, setMediaVersion] = useState(0);
@@ -102,6 +104,7 @@ function PresentationRoot({
       deckDirectory={deckDirectory}
       mediaVersion={mediaVersion}
       statusMessage={statusMessage}
+      showPresenterNotes={showPresenterNotes}
     />
   );
 }
@@ -116,6 +119,7 @@ async function main(): Promise<void> {
   }
 
   const deckDirectory = resolve(deckDirInput);
+  const showPresenterNotes = process.env['SHOW_PRESENTER_NOTES'] === 'true';
   const {source, sldFiles} = await readDeckDirectory(deckDirectory);
   const deck = parseSlides(source);
 
@@ -130,6 +134,7 @@ async function main(): Promise<void> {
       deckDirectory={deckDirectory}
       initialSlides={deck.slides}
       initialSldFiles={sldFiles}
+      showPresenterNotes={showPresenterNotes}
     />,
     {
     exitOnCtrlC: false

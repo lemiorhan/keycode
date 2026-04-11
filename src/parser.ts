@@ -5,6 +5,7 @@ import {extractAsciiArtBlock} from './asciiArtTag.js';
 import {extractBeautifyTag} from './beautifyTag.js';
 import {extractFootnoteBlock} from './footnoteTag.js';
 import {extractImageTag} from './imageTag.js';
+import {extractPresenterNotes} from './presenterNotesTag.js';
 import {extractQrBlock} from './qrTag.js';
 import {extractScreenTags} from './screenTag.js';
 import {extractSlideNumberTag} from './slideNumberTag.js';
@@ -34,11 +35,13 @@ function trimOuterBlankLines(value: string): string {
 }
 
 export function parseSlides(source: string): ParsedDeck {
-  const normalized = stripCommentLines(stripBlockComments(normalizeDeckSource(source)));
-  const rawSlides = normalized.split(SLIDE_SEPARATOR).map(trimOuterBlankLines);
-  const nonEmptySlides = rawSlides.filter((slide) => slide.length > 0);
+  const normalized = stripCommentLines(normalizeDeckSource(source));
+  const rawSlidesWithNotes = normalized.split(SLIDE_SEPARATOR).map(trimOuterBlankLines);
+  const nonEmptySlidesWithNotes = rawSlidesWithNotes.filter((slide) => slide.length > 0);
 
-  const slides = nonEmptySlides.map((raw, index, all): Slide => {
+  const slides = nonEmptySlidesWithNotes.map((rawWithNotes, index, all): Slide => {
+    const presenterNotes = extractPresenterNotes(rawWithNotes);
+    const raw = stripBlockComments(rawWithNotes).replace(/^\n+/, '').replace(/\n+$/, '');
     const hasQuestion = raw.includes(QUESTION_TOKEN);
     const withoutQuestionToken = raw
       .replace(/\n?[ \t]*\[QUESTION\][ \t]*\n?/g, '\n')
@@ -81,7 +84,8 @@ export function parseSlides(source: string): ParsedDeck {
       imageWidthPercent: imageExtraction.imageWidthPercent,
       imageBackgroundColor: imageExtraction.imageBackgroundColor,
       align: alignExtraction.align,
-      size: sizeExtraction.size
+      size: sizeExtraction.size,
+      presenterNotes
     };
   });
 

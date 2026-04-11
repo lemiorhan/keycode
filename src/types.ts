@@ -50,6 +50,7 @@ export interface Slide {
   slideNumber?: SlideNumberDirective;
   align?: SlideAlign;
   size: SlideSize;
+  presenterNotes?: string;
 }
 
 export interface ParsedDeck {

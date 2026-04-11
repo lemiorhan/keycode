@@ -332,7 +332,7 @@ export class ExternalMediaViewer {
   open(
     imagePath: string,
     options: {
-      position?: SlideSide;
+      position?: SlideSide | 'center';
       align?: OverlayAlign;
       widthPercent?: number;
       panePosition?: SlideSide;
