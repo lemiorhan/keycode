@@ -42,7 +42,7 @@
 - All decks live under the **`decks/`** folder in the project root.
 - Each deck is a subfolder containing one or more UTF-8 **`.sld`** files, an optional **`.index`** file, and an optional **`images/`** subfolder.
 - **Slide ordering** is determined by the `.index` file:
-  - If a **`.index`** file exists, its lines define the order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored.
+  - If a **`.index`** file exists, its lines define the order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored. Comments are supported: `//` for single-line and `/* */` for multi-line.
   - If **no `.index`** file exists, `.sld` files are **sorted alphabetically** and concatenated.
 - The `.index` file is watched for changes and triggers a live reload.
 - Typical structure:
@@ -62,9 +62,15 @@ decks/
 - Example `.index` file:
 
 ```
+// opening section
 intro
 main
-closing
+
+/* not ready yet
+extras
+*/
+
+closing // wrap-up
 ```
 
 - Run by deck name: `./keycode present my-talk` (resolves to `decks/my-talk/`).

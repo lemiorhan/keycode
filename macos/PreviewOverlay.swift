@@ -34,7 +34,7 @@ final class ZoomableScrollView: NSScrollView {
     }
 }
 
-final class NotesController: NSObject, NSApplicationDelegate {
+final class PreviewController: NSObject, NSApplicationDelegate {
     private let left: CGFloat
     private let top: CGFloat
     private let width: CGFloat
@@ -42,9 +42,9 @@ final class NotesController: NSObject, NSApplicationDelegate {
     private var panel: NSPanel?
     private var scrollView: ZoomableScrollView?
     private var textView: NSTextView?
-    private var fontSize: CGFloat = 13
+    private var fontSize: CGFloat = 11
     private var lastText: String = ""
-    private static let minFontSize: CGFloat = 8
+    private static let minFontSize: CGFloat = 6
     private static let maxFontSize: CGFloat = 40
 
     init(left: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat) {
@@ -97,7 +97,7 @@ final class NotesController: NSObject, NSApplicationDelegate {
 
             if code == "39" || code == "0" || code == "37" {
                 currentColor = defaultColor
-            } else if let color = NotesController.ansiColors[code] {
+            } else if let color = PreviewController.ansiColors[code] {
                 currentColor = color
             }
 
@@ -134,7 +134,7 @@ final class NotesController: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Presenter Notes"
+        panel.title = "Slide Preview"
         panel.level = .floating
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
@@ -241,7 +241,7 @@ final class NotesController: NSObject, NSApplicationDelegate {
 
     private func zoom(_ direction: CGFloat) {
         let newSize = fontSize + direction
-        fontSize = min(max(newSize, NotesController.minFontSize), NotesController.maxFontSize)
+        fontSize = min(max(newSize, PreviewController.minFontSize), PreviewController.maxFontSize)
 
         guard let textView = self.textView else { return }
 
@@ -260,11 +260,11 @@ guard CommandLine.arguments.count >= 5 else {
 
 let left = CGFloat(Double(CommandLine.arguments[1]) ?? 0)
 let top = CGFloat(Double(CommandLine.arguments[2]) ?? 0)
-let width = CGFloat(Double(CommandLine.arguments[3]) ?? 400)
-let height = CGFloat(Double(CommandLine.arguments[4]) ?? 300)
+let width = CGFloat(Double(CommandLine.arguments[3]) ?? 600)
+let height = CGFloat(Double(CommandLine.arguments[4]) ?? 500)
 
 let app = NSApplication.shared
-let delegate = NotesController(left: left, top: top, width: width, height: height)
+let delegate = PreviewController(left: left, top: top, width: width, height: height)
 app.setActivationPolicy(.accessory)
 app.delegate = delegate
 app.run()

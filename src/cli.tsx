@@ -22,6 +22,7 @@ function PresentationRoot({
   showPresenterNotes
 }: PresentationRootProps): React.JSX.Element {
   const [slides, setSlides] = useState(initialSlides);
+  const [sldFiles, setSldFiles] = useState(initialSldFiles);
   const [mediaVersion, setMediaVersion] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | undefined>(undefined);
 
@@ -44,7 +45,7 @@ function PresentationRoot({
 
     const reloadDeck = async (): Promise<void> => {
       try {
-        const {source} = await readDeckDirectory(deckDirectory);
+        const {source, sldFiles: newSldFiles} = await readDeckDirectory(deckDirectory);
         const deck = parseSlides(source);
 
         if (disposed || deck.slides.length === 0) {
@@ -52,6 +53,7 @@ function PresentationRoot({
         }
 
         setSlides(deck.slides);
+        setSldFiles(newSldFiles);
         setMediaVersion((current) => current + 1);
         setStatusMessage(undefined);
       } catch (error) {
@@ -69,7 +71,11 @@ function PresentationRoot({
       }, 120);
     };
 
-    for (const sldFile of initialSldFiles) {
+    const deckDirWatcher = watch(deckDirectory, () => {
+      scheduleReload();
+    });
+
+    for (const sldFile of sldFiles) {
       sldWatchers.push(watch(sldFile, () => {
         scheduleReload();
       }));
@@ -90,13 +96,14 @@ function PresentationRoot({
     return () => {
       disposed = true;
       clearTimer();
+      deckDirWatcher.close();
       for (const w of sldWatchers) {
         w.close();
       }
       imagesWatcher?.close();
       indexWatcher?.close();
     };
-  }, [deckDirectory, initialSldFiles]);
+  }, [deckDirectory, sldFiles]);
 
   return (
     <PresentationApp

@@ -105,7 +105,7 @@ Each slide tag has a dedicated `*Tag.ts` module that exports an `extract*` funct
 ## Deck Slide Ordering (.index)
 
 Each deck directory may contain an `.index` file to control the order of `.sld` files:
-- If `.index` exists, its lines define the slide order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored.
+- If `.index` exists, its lines define the slide order. Each line is a filename **without** the `.sld` extension. Blank lines and leading/trailing whitespace are ignored. Comments are supported: `//` for single-line and `/* */` for multi-line.
 - If `.index` does not exist, `.sld` files are loaded in alphabetical order.
 - The `.index` file is watched for changes and triggers a live reload.
 

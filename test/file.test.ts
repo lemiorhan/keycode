@@ -122,6 +122,59 @@ test('readDeckDirectory does not double-append separator when file already ends 
   }
 });
 
+test('readDeckDirectory ignores single-line comments in .index', async () => {
+  const dir = await createTempDeck({
+    'alpha.sld': 'Slide A',
+    'beta.sld': 'Slide B',
+    'gamma.sld': 'Slide G',
+    '.index': '// intro section\nalpha\n// middle\nbeta\ngamma // inline'
+  });
+
+  try {
+    const {sldFiles} = await readDeckDirectory(dir);
+    assert.equal(sldFiles.length, 3);
+    assert.ok(sldFiles[0].endsWith('alpha.sld'));
+    assert.ok(sldFiles[1].endsWith('beta.sld'));
+    assert.ok(sldFiles[2].endsWith('gamma.sld'));
+  } finally {
+    await rm(dir, {recursive: true});
+  }
+});
+
+test('readDeckDirectory ignores multi-line comments in .index', async () => {
+  const dir = await createTempDeck({
+    'alpha.sld': 'Slide A',
+    'beta.sld': 'Slide B',
+    '.index': 'alpha\n/* temporarily\ndisabled\nbeta\n*/\nbeta'
+  });
+
+  try {
+    const {sldFiles} = await readDeckDirectory(dir);
+    assert.equal(sldFiles.length, 2);
+    assert.ok(sldFiles[0].endsWith('alpha.sld'));
+    assert.ok(sldFiles[1].endsWith('beta.sld'));
+  } finally {
+    await rm(dir, {recursive: true});
+  }
+});
+
+test('readDeckDirectory handles mixed comments and blank lines in .index', async () => {
+  const dir = await createTempDeck({
+    'alpha.sld': 'Slide A',
+    'beta.sld': 'Slide B',
+    '.index': '// header\n\nalpha\n\n/* skip */\n\nbeta\n// end'
+  });
+
+  try {
+    const {sldFiles} = await readDeckDirectory(dir);
+    assert.equal(sldFiles.length, 2);
+    assert.ok(sldFiles[0].endsWith('alpha.sld'));
+    assert.ok(sldFiles[1].endsWith('beta.sld'));
+  } finally {
+    await rm(dir, {recursive: true});
+  }
+});
+
 test('readDeckDirectory ignores non-.sld files when no .index exists', async () => {
   const dir = await createTempDeck({
     'alpha.sld': 'Slide A',

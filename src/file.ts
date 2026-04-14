@@ -8,12 +8,19 @@ export async function readSlidesFile(path: string): Promise<string> {
   return readFile(path, 'utf8');
 }
 
+function stripComments(content: string): string {
+  return content
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+}
+
 async function resolveOrderedSldFiles(deckDir: string, entries: string[]): Promise<string[]> {
   const indexPath = resolve(deckDir, INDEX_FILE);
 
   if (existsSync(indexPath)) {
     const indexContent = await readFile(indexPath, 'utf8');
-    const names = indexContent
+    const stripped = stripComments(indexContent);
+    const names = stripped
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0);

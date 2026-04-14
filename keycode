@@ -31,6 +31,7 @@ usage() {
   echo "Usage:" >&2
   echo "  keycode present <deck-name>    present all .sld files in decks/<deck-name>/" >&2
   echo "  keycode present <path/to/deck> present all .sld files in a deck directory" >&2
+  echo "  keycode preview <deck-name>    preview slides in a floating window" >&2
   echo "  keycode init <deck-name>       scaffold a new deck in decks/" >&2
   exit 1
 }
@@ -111,6 +112,14 @@ if [ "$1" = "present" ]; then
     exit 1
   fi
   ARG="$2"
+  CLI_ENTRY="cli"
+elif [ "$1" = "preview" ]; then
+  if [ "$#" -ne 2 ]; then
+    echo "Usage: keycode preview <deck-name | path/to/deck>" >&2
+    exit 1
+  fi
+  ARG="$2"
+  CLI_ENTRY="previewCli"
 else
   usage
 fi
@@ -128,8 +137,8 @@ if [ ! -d "$DECK_DIR" ]; then
   exit 1
 fi
 
-if [ -f "$SCRIPT_DIR/dist/src/cli.js" ]; then
-  exec node "$SCRIPT_DIR/dist/src/cli.js" "$DECK_DIR"
+if [ -f "$SCRIPT_DIR/dist/src/${CLI_ENTRY}.js" ]; then
+  exec node "$SCRIPT_DIR/dist/src/${CLI_ENTRY}.js" "$DECK_DIR"
 fi
 
-exec npx tsx "$SCRIPT_DIR/src/cli.tsx" "$DECK_DIR"
+exec npx tsx "$SCRIPT_DIR/src/${CLI_ENTRY}.tsx" "$DECK_DIR"
