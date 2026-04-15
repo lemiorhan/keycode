@@ -818,7 +818,7 @@ Supports <color fg="yellow">color tags</color>.
 - Notes content is extracted before the block comment is stripped, so it never appears in the slide body.
 - `<color>` tags inside notes are rendered with ANSI colors in the overlay.
 - `<p>` tags inside notes are processed for wrapping and alignment.
-- Leading/trailing blank lines and trailing whitespace per line are trimmed.
+- All newlines in the notes are preserved exactly as written. Leading/trailing blank lines and trailing whitespace per line are trimmed.
 - Only **one** presenter notes block per slide is recognized (first match wins).
 - Regular block comments (`/* ... */` without the `PRESENTER NOTES:` prefix) are stripped as usual and do not produce notes.
 - The overlay window is positioned at the bottom-left of the Terminal window with a dark semi-transparent background.

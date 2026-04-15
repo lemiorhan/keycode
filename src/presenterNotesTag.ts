@@ -12,26 +12,15 @@ export function extractPresenterNotes(raw: string): string | undefined {
     .replace(/\n+$/, '');
 
   return trimmed
-    .split(/\n{2,}/)
-    .map((paragraph) => {
-      const lines = paragraph
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+    .split('\n')
+    .map((line) => {
+      const stripped = line.trim();
 
-      const result: string[] = [];
-
-      for (const line of lines) {
-        if (/^\*\s/.test(line)) {
-          result.push(`• ${line.slice(1).trim()}`);
-        } else if (result.length > 0) {
-          result[result.length - 1] = `${result[result.length - 1]} ${line}`;
-        } else {
-          result.push(line);
-        }
+      if (/^\*\s/.test(stripped)) {
+        return `• ${stripped.slice(1).trim()}`;
       }
 
-      return result.join('\n');
+      return stripped;
     })
-    .join('\n\n');
+    .join('\n');
 }

@@ -646,7 +646,7 @@ export function PresentationApp({
       return;
     }
 
-    if (input === 'q') {
+    if (input === 'q' && !questionInputEnabled && !jumpModeActive) {
       exit();
       return;
     }
