@@ -5,3 +5,10 @@ dist/
 .env
 macos/.PresenterNotesOverlay
 macos/.PreviewOverlay
+
+# Editor and AI assistant local configs
+.claude/
+.cursor/
+*.swp
+*.swo
+*~

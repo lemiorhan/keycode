@@ -1,7 +1,29 @@
 {
   "name": "keycode",
   "version": "0.1.0",
-  "description": "Terminal-based presentation app for macOS Terminal.app",
+  "description": "Terminal-based presentation tool that renders .sld slide files in the terminal using React and Ink",
+  "license": "MIT",
+  "author": "Lemi Orhan Ergin <lemi@craftgate.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lemiorhan/keycode.git"
+  },
+  "homepage": "https://github.com/lemiorhan/keycode",
+  "bugs": {
+    "url": "https://github.com/lemiorhan/keycode/issues"
+  },
+  "keywords": [
+    "presentation",
+    "terminal",
+    "slides",
+    "cli",
+    "ink",
+    "react",
+    "macos",
+    "speaker",
+    "talk",
+    "console"
+  ],
   "type": "module",
   "bin": {
     "keycode": "./dist/src/cli.js"
