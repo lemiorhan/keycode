@@ -12,6 +12,8 @@ import {centerStackedSections, centerTextBlock, composeTwoScreenLayout} from './
 import {
   ensureQrImage,
   ExternalMediaViewer,
+  overlayFrameRowsAtCell,
+  overlayWindowBounds,
   readImageSize,
   resolveDeckImagePath
 } from './externalQr.js';
@@ -48,7 +50,7 @@ function visibleWidth(line: string): number {
   return stringWidth(line.replace(ANSI_PATTERN, ''));
 }
 
-function extractImageAnchor(frame: string): {
+export function extractImageAnchor(frame: string): {
   frame: string;
   anchor?: {row: number; column: number};
 } {
@@ -89,6 +91,128 @@ function reserveInlineImageSpace(content: string, spacerRows: number): string {
 
   const replacement = `${'\n'.repeat(spacerRows - 1)}${IMAGE_ANCHOR_TOKEN}`;
   return content.replace(IMAGE_ANCHOR_TOKEN, replacement);
+}
+
+interface PresentationFrameOptions {
+  slide?: Slide;
+  textFrame: string;
+  rows: number;
+  columns: number;
+  align: Slide['align'];
+  headerContent?: string;
+  footerContent?: string;
+  hintLine?: string;
+  topOverlayLine?: string;
+  topOverlayAlign?: Slide['align'];
+  bottomOverlayLine?: string;
+  bottomOverlayAlign?: Slide['align'];
+  forcePerLineCenter?: boolean;
+  verticalAlign?: 'top' | 'center';
+}
+
+export function buildPresentationFrame(options: PresentationFrameOptions): string {
+  const {
+    slide,
+    textFrame,
+    rows,
+    columns,
+    align,
+    headerContent,
+    footerContent,
+    hintLine,
+    topOverlayLine,
+    topOverlayAlign,
+    bottomOverlayLine,
+    bottomOverlayAlign,
+    forcePerLineCenter,
+    verticalAlign
+  } = options;
+  const screens =
+    slide?.screens && slide.screens.length === 2
+      ? ([slide.screens[0], slide.screens[1]] as [typeof slide.screens[0], typeof slide.screens[1]])
+      : undefined;
+
+  if (slide?.asciiArt && screens) {
+    return composeTwoScreenLayout(slide.asciiArt, textFrame, {
+      rows,
+      columns,
+      headerContent,
+      footerContent,
+      hintLine,
+      topOverlayLine,
+      topOverlayAlign,
+      bottomOverlayLine,
+      bottomOverlayAlign,
+      screens
+    });
+  }
+
+  if (slide?.asciiArt) {
+    return centerStackedSections([slide.asciiArt, textFrame], {
+      rows,
+      columns,
+      align: 'center',
+      headerContent,
+      footerContent,
+      hintLine,
+      topOverlayLine,
+      topOverlayAlign,
+      bottomOverlayLine,
+      bottomOverlayAlign,
+      sectionGap: 1
+    });
+  }
+
+  if (slide?.imagePath && screens) {
+    return composeTwoScreenLayout('', textFrame, {
+      rows,
+      columns,
+      headerContent,
+      footerContent,
+      hintLine,
+      topOverlayLine,
+      topOverlayAlign,
+      bottomOverlayLine,
+      bottomOverlayAlign,
+      screens
+    });
+  }
+
+  return centerTextBlock(textFrame, {
+    rows,
+    columns,
+    align,
+    headerContent,
+    footerContent,
+    hintLine,
+    topOverlayLine,
+    topOverlayAlign,
+    bottomOverlayLine,
+    bottomOverlayAlign,
+    forcePerLineCenter,
+    verticalAlign
+  });
+}
+
+interface InlineImageOverlayAnchorOptions extends PresentationFrameOptions {
+  spacerRows: number;
+}
+
+export function resolveInlineImageOverlayAnchor(
+  options: InlineImageOverlayAnchorOptions
+): {row: number; column: number} | undefined {
+  const {spacerRows, ...frameOptions} = options;
+  const reservedTextFrame = reserveInlineImageSpace(frameOptions.textFrame, spacerRows);
+  const anchor = extractImageAnchor(buildPresentationFrame({...frameOptions, textFrame: reservedTextFrame})).anchor;
+
+  if (!anchor) {
+    return undefined;
+  }
+
+  return {
+    row: Math.max(anchor.row - spacerRows + Math.floor(spacerRows / 2), 0),
+    column: anchor.column
+  };
 }
 
 function addCursor(content: string, cursorVisible: boolean, columns: number): string {
@@ -143,7 +267,6 @@ export function PresentationApp({
   const previousSlideIndexRef = useRef<number | null>(null);
   const externalMediaViewerRef = useRef(new ExternalMediaViewer());
   const presenterNotesViewerRef = useRef(new PresenterNotesViewer());
-  const inlineImageAnchorRef = useRef<{row: number; column: number} | undefined>(undefined);
   const blinkVisible = useBlinkCursor();
   const currentSlide = slides[slideIndex];
   const currentAiSimulationState = aiSimulationStates[slideIndex];
@@ -313,20 +436,38 @@ export function PresentationApp({
     }
 
     const widthPercent = currentSlide.imageWidthPercent ?? 30;
-    const estimatedRows = Math.round(
-      rows * (widthPercent / 100) * (imageSize.height / Math.max(imageSize.width, 1))
-    );
+    const bounds = overlayWindowBounds();
+    const estimatedRows = bounds
+      ? overlayFrameRowsAtCell(bounds, {
+          intrinsicWidth: imageSize.width,
+          intrinsicHeight: imageSize.height,
+          widthPercent,
+          anchorRow: Math.floor(rows / 2),
+          anchorColumn: Math.floor(columns / 2),
+          terminalRows: rows,
+          terminalColumns: columns
+        })
+      : Math.round(
+          columns *
+            (widthPercent / 100) *
+            (imageSize.height / Math.max(imageSize.width, 1)) *
+            0.5
+        );
 
-    return Math.min(Math.max(estimatedRows + 1, 4), Math.max(Math.floor(rows / 2), 4));
+    return Math.min(Math.max(estimatedRows, 4), Math.max(Math.floor(rows / 2), 4));
   }, [
+    columns,
     currentSlide?.imagePath,
     currentSlide?.imageWidthPercent,
     currentSlide?.screens,
     deckDirectory,
     rows
   ]);
+  const hasTopMargin = /<p\b[^>]*\btop-margin=/i.test(currentSlide?.body ?? '');
   const visibleTextFrame = reserveInlineImageSpace(frame, inlineImageSpacerRows);
-  const finalFrame = centerTextBlock(visibleTextFrame, {
+  const frameWithScreens = buildPresentationFrame({
+    slide: currentSlide,
+    textFrame: visibleTextFrame,
     rows,
     columns,
     align: isTransitioning ? displayAlign : effectiveAlign,
@@ -337,66 +478,49 @@ export function PresentationApp({
     topOverlayAlign,
     bottomOverlayLine,
     bottomOverlayAlign,
-    forcePerLineCenter: !!currentSlide?.titleText
+    forcePerLineCenter: !!currentSlide?.titleText,
+    verticalAlign: hasTopMargin ? 'top' : undefined
   });
-  const screens =
-    currentSlide?.screens && currentSlide.screens.length === 2
-      ? (currentSlide.screens as [typeof currentSlide.screens[0], typeof currentSlide.screens[1]])
-      : undefined;
-  const frameWithScreens =
-    currentSlide?.asciiArt && screens
-        ? composeTwoScreenLayout(currentSlide.asciiArt, visibleTextFrame, {
-            rows,
-            columns,
-            headerContent: isTransitioning ? displayHeader : renderedHeader,
-            footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-            hintLine: jumpHintLine,
-            topOverlayLine,
-            topOverlayAlign,
-            bottomOverlayLine,
-            bottomOverlayAlign,
-            screens
-          })
-        : currentSlide?.asciiArt
-          ? centerStackedSections(
-              [currentSlide.asciiArt, visibleTextFrame],
-              {
-                rows,
-                columns,
-                align: 'center',
-                headerContent: isTransitioning ? displayHeader : renderedHeader,
-                footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-                hintLine: jumpHintLine,
-                topOverlayLine,
-                topOverlayAlign,
-                bottomOverlayLine,
-                bottomOverlayAlign,
-                sectionGap: 1
-              }
-            )
-          : currentSlide?.imagePath && screens
-            ? composeTwoScreenLayout(
-                '',
-                visibleTextFrame,
-                {
-                  rows,
-                  columns,
-                  headerContent: isTransitioning ? displayHeader : renderedHeader,
-                  footerContent: isTransitioning ? displayFootnote : renderedFootnote,
-                  hintLine: jumpHintLine,
-                  topOverlayLine,
-                  topOverlayAlign,
-                  bottomOverlayLine,
-                  bottomOverlayAlign,
-                  screens
-                }
-              )
-            : finalFrame;
-  const {frame: anchoredFrame, anchor: inlineImageAnchor} = useMemo(
+  const stableInlineImageAnchor = useMemo(
+    () =>
+      resolveInlineImageOverlayAnchor({
+        slide: currentSlide,
+        textFrame: renderedTextContent,
+        spacerRows: inlineImageSpacerRows,
+        rows,
+        columns,
+        align: effectiveAlign,
+        headerContent: renderedHeader,
+        footerContent: renderedFootnote,
+        hintLine: jumpHintLine,
+        topOverlayLine,
+        topOverlayAlign,
+        bottomOverlayLine,
+        bottomOverlayAlign,
+        forcePerLineCenter: !!currentSlide?.titleText,
+        verticalAlign: hasTopMargin ? 'top' : undefined
+      }),
+    [
+      bottomOverlayAlign,
+      bottomOverlayLine,
+      columns,
+      currentSlide,
+      effectiveAlign,
+      hasTopMargin,
+      inlineImageSpacerRows,
+      jumpHintLine,
+      renderedFootnote,
+      renderedHeader,
+      renderedTextContent,
+      rows,
+      topOverlayAlign,
+      topOverlayLine
+    ]
+  );
+  const {frame: anchoredFrame} = useMemo(
     () => extractImageAnchor(frameWithScreens),
     [frameWithScreens]
   );
-  inlineImageAnchorRef.current = inlineImageAnchor;
   const displayedFrame =
     isTransitioning || aiSimulationRunning || jumpModeActive
       ? anchoredFrame
@@ -546,7 +670,7 @@ export function PresentationApp({
                       align: 'center' as const
                     }
                   : {
-                      anchorRow: Math.max((inlineImageAnchorRef.current?.row ?? Math.floor(rows / 2)) - inlineImageSpacerRows + Math.floor(inlineImageSpacerRows / 2), 0),
+                      anchorRow: stableInlineImageAnchor?.row ?? Math.floor(rows / 2),
                       anchorColumn: Math.floor(columns / 2),
                       terminalRows: rows,
                       terminalColumns: columns
@@ -595,6 +719,7 @@ export function PresentationApp({
     currentSlide?.qrWidthPercent,
     deckDirectory,
     mediaVersion,
+    stableInlineImageAnchor?.row,
     rows,
     columns
   ]);

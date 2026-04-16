@@ -7,6 +7,7 @@ import {
   ensureQrImage,
   overlayFrame,
   overlayFrameAtCell,
+  overlayFrameRowsAtCell,
   overlayFrameInPane,
   overlayTopLeft,
   paneBounds,
@@ -117,6 +118,28 @@ test('overlayFrameAtCell centers an image around the requested terminal cell', (
   assert.equal(frame.left <= 660, true);
   assert.equal(frame.top >= 100, true);
   assert.equal(frame.top <= 566, true);
+});
+
+test('overlayFrameRowsAtCell returns the overlay height in terminal rows', () => {
+  const rows = overlayFrameRowsAtCell(
+    {
+      left: 100,
+      top: 80,
+      right: 900,
+      bottom: 700
+    },
+    {
+      intrinsicWidth: 1200,
+      intrinsicHeight: 600,
+      widthPercent: 30,
+      anchorRow: 10,
+      anchorColumn: 20,
+      terminalRows: 24,
+      terminalColumns: 80
+    }
+  );
+
+  assert.equal(rows, 5);
 });
 
 test('paneBounds returns the selected left or right pane bounds', () => {

@@ -369,3 +369,23 @@ test('centerStackedSections preserves ascii art shape while centering it as a bl
   assert.equal(lines[1], '           ( o.o )');
   assert.equal(lines[2], '            > ^ <');
 });
+
+test('centerTextBlock pins content to the top when verticalAlign is top', () => {
+  const centered = centerTextBlock('\n\n\nHello', {
+    rows: 10,
+    columns: 11
+  });
+  const topAligned = centerTextBlock('\n\n\nHello', {
+    rows: 10,
+    columns: 11,
+    verticalAlign: 'top'
+  });
+  const centeredLines = centered.split('\n');
+  const topLines = topAligned.split('\n');
+
+  // Centered puts content in the middle (topPad > 0)
+  assert.equal(centeredLines[3]?.trim(), '');
+  // Top-aligned starts content at row 0 (no topPad)
+  assert.equal(topLines[0]?.trim(), '');
+  assert.equal(topLines[3], '   Hello');
+});

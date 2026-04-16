@@ -299,7 +299,7 @@ Wraps and aligns text within a constrained width. This is the primary tool for c
 
 **Syntax:**
 ```md
-<p max-width=72 align=left>
+<p max-width=72 align=left top-margin=3>
 Paragraph content here. This text will be soft-wrapped
 to fit within the specified max-width.
 </p>
@@ -311,6 +311,7 @@ to fit within the specified max-width.
 |-----------|----------|--------|---------|-------------|
 | `max-width` | No | Any positive integer | `80` | Maximum character width for soft-wrapping |
 | `align` | No | `left`, `center`, `right` | `center` | Text alignment within the paragraph's max-width |
+| `top-margin` | No | Any non-negative integer | none | Number of empty lines to insert above the paragraph content |
 
 **Behavior:**
 - Text inside `<p>` is soft-wrapped at word boundaries to respect `max-width`.
@@ -321,6 +322,7 @@ to fit within the specified max-width.
 - `<color>` tags inside `<p>` are fully supported — color markup is not counted toward visible width for wrapping calculations.
 - Multiple `<p>` blocks per slide are supported; each is processed independently.
 - The paragraph tag produces pre-aligned text with ANSI color codes already applied.
+- When `top-margin` is set, the specified number of empty lines is inserted above the paragraph. These margin lines define the exact starting line of the text and are **not affected by slide `<size>` spacing** — the margin remains constant regardless of whether the slide uses `normal`, `large`, or `xlarge` size. The text will never move above the margin boundary.
 
 **Attribute format note:** Attribute values can be written with or without quotes:
 - `max-width=72` ✓

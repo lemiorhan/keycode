@@ -65,6 +65,10 @@ function screenBounds(): WindowBounds | undefined {
   return output ? parseBounds(output) : undefined;
 }
 
+export function overlayWindowBounds(): WindowBounds | undefined {
+  return terminalWindowBounds() ?? screenBounds();
+}
+
 export function overlayTopLeft(bounds: WindowBounds): {x: number; top: number} {
   return {
     x: bounds.right - OVERLAY_WINDOW_WIDTH - OVERLAY_WINDOW_MARGIN,
@@ -162,6 +166,14 @@ export function overlayFrameAtCell(
   const top = Math.min(Math.max(Math.round(centerY - height / 2), minTop), maxTop);
 
   return {left, top, width, height};
+}
+
+export function overlayFrameRowsAtCell(bounds: WindowBounds, options: OverlayCellFrameOptions): number {
+  const frame = overlayFrameAtCell(bounds, options);
+  const usableHeight = Math.max(bounds.bottom - bounds.top - OVERLAY_WINDOW_MARGIN * 2, 1);
+  const cellHeight = usableHeight / Math.max(options.terminalRows, 1);
+
+  return Math.max(Math.ceil(frame.height / cellHeight), 1);
 }
 
 interface OverlayPaneFrameOptions {

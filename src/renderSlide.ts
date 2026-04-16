@@ -1,7 +1,7 @@
 import type {QuestionState, Slide} from './types.js';
 import type {AiSimulationProgress} from './aiSimulation.js';
 import {renderInlineColors} from './colorText.js';
-import {renderParagraphBlocks} from './paragraphTag.js';
+import {renderParagraphBlocks, expandTopMarginMarkers} from './paragraphTag.js';
 import {applyRevealLines} from './revealLines.js';
 import {renderHeaderAscii, renderTitleAscii} from './titleArt.js';
 
@@ -45,8 +45,10 @@ interface RenderSlideOptions {
 function renderRichTextBlock(content: string, size: Slide['size']): string {
   const spacing = size === 'normal' ? '\n' : '\n\n';
   const bodyWithParagraphs = renderParagraphBlocks(content.trimEnd());
+  const withSpacing = bodyWithParagraphs.split('\n').join(spacing);
+  const withMargins = expandTopMarginMarkers(withSpacing);
 
-  return renderInlineColors(bodyWithParagraphs.split('\n').join(spacing));
+  return renderInlineColors(withMargins);
 }
 
 function renderQuestionSection(options: RenderSlideOptions): string {

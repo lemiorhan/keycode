@@ -391,6 +391,43 @@ test('renderSlideContent appends media errors after the slide body', () => {
   assert.equal(rendered, '\x1b[37mBody\n\n[image not found: lemi.png]\x1b[39m');
 });
 
+test('renderSlideContent adds exact top-margin empty lines before paragraph content', () => {
+  const slide: Slide = {
+    index: 10,
+    raw: '<p top-margin=3 align=left>Hello World</p>',
+    body: '<p top-margin=3 align=left>Hello World</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'normal'
+  };
+
+  const rendered = renderSlideContent({slide});
+  const lines = rendered.split('\n');
+
+  assert.equal(lines[0], '\x1b[37m');
+  assert.equal(lines[1], '');
+  assert.equal(lines[2], '');
+  assert.match(lines[3] ?? '', /Hello World/);
+});
+
+test('renderSlideContent preserves exact top-margin lines in large size mode', () => {
+  const slide: Slide = {
+    index: 11,
+    raw: '<p top-margin=2 align=left>Content</p>',
+    body: '<p top-margin=2 align=left>Content</p>',
+    isAsciiArt: false,
+    hasQuestion: false,
+    size: 'large'
+  };
+
+  const rendered = renderSlideContent({slide});
+  const lines = rendered.split('\n');
+
+  assert.equal(lines[0], '\x1b[37m');
+  assert.equal(lines[1], '');
+  assert.match(lines[2] ?? '', /Content/);
+});
+
 test('renderSlideContent adds decorative ascii bands when beautify is enabled', () => {
   const slide: Slide = {
     index: 9,

@@ -14,6 +14,7 @@ export interface RenderOptions {
   headerContent?: string;
   footerContent?: string;
   forcePerLineCenter?: boolean;
+  verticalAlign?: 'top' | 'center';
 }
 
 const ANSI_PATTERN = /\x1B\[[0-9;]*m/g;
@@ -92,11 +93,13 @@ function linePad(targetWidth: number, lineWidth: number, align: SlideAlign): num
   return Math.max(Math.floor((targetWidth - lineWidth) / 2), 0);
 }
 
-function centerLines(lines: string[], rows: number, columns: number, align: SlideAlign, forcePerLineCenter = false): string[] {
+function centerLines(lines: string[], rows: number, columns: number, align: SlideAlign, forcePerLineCenter = false, verticalAlign?: 'top' | 'center'): string[] {
   const croppedLines = lines.map((line) => cropLine(line, columns));
   const visibleLines = croppedLines.slice(0, rows);
   const sourceVisibleLines = lines.slice(0, rows);
-  const topPad = Math.max(Math.floor((rows - visibleLines.length) / 2), 0);
+  const topPad = verticalAlign === 'top'
+    ? 0
+    : Math.max(Math.floor((rows - visibleLines.length) / 2), 0);
   const paddedBlock = hasPreAlignedPadding(sourceVisibleLines);
   const useBlockAlignment = !forcePerLineCenter && (align !== 'center' || shouldCenterAsBlock(visibleLines));
   const blockWidth = useBlockAlignment
@@ -212,7 +215,7 @@ export function centerTextBlock(content: string, options: RenderOptions): string
     ...(headerLines.length > 0 ? [''] : []),
     ...headerLines,
     ...(headerLines.length > 0 ? [''] : []),
-    ...centerLines(rawLines, usableRows, columns, align, options.forcePerLineCenter)
+    ...centerLines(rawLines, usableRows, columns, align, options.forcePerLineCenter, options.verticalAlign)
   ];
 
   if (footerLines.length > 0) {
