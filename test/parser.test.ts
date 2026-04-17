@@ -103,6 +103,23 @@ Visible /* hidden */ line
   assert.equal(deck.slides[0]?.body, 'Visible  line');
 });
 
+test('parseSlides drops slides that contain ignore tags', () => {
+  const deck = parseSlides(`
+Visible line
+---
+This slide is skipped
+<ignore/>
+---
+Inline <ignore /> tag also skips this slide
+---
+Still visible
+`);
+
+  assert.equal(deck.slides.length, 2);
+  assert.equal(deck.slides[0]?.body, 'Visible line');
+  assert.equal(deck.slides[1]?.body, 'Still visible');
+});
+
 test('parseSlides strips image-url blocks from slide body', () => {
   const deck = parseSlides(`
 <image-url>

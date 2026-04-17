@@ -14,6 +14,7 @@
    - [`<title>`](#title)
    - [`<header>`](#header)
    - [`<beautify/>`](#beautify)
+   - [`<ignore/>`](#ignore)
    - [`<size>`](#size)
    - [`<align>`](#align)
    - [`<p>`](#p-paragraph)
@@ -241,6 +242,33 @@ Adds decorative ASCII ornament bands above and below the slide content.
 **Interactions:**
 - Best combined with `<title>` for visually rich opening/closing slides.
 - Works with any slide content, but designed for slides with significant empty space.
+
+---
+
+### `<ignore/>`
+
+Marks the entire slide to be skipped.
+
+**Syntax:**
+```md
+<ignore/>
+```
+
+**Behavior:**
+- Self-closing tag; no content or attributes.
+- If a slide contains `<ignore/>` anywhere, that entire slide is removed from the parsed deck.
+- The skipped slide does not appear in navigation, slide numbering, layout, presenter notes, or rendering.
+- Position does not matter: top, bottom, or inline all skip the slide.
+- Both `<ignore/>` and `<ignore />` are accepted.
+
+**Use cases:**
+- Temporarily disable a slide without deleting its contents.
+- Keep draft or backup slides in a deck file while excluding them from the presentation.
+- Turn a slide off without changing deck ordering around it.
+
+**Interactions:**
+- Applied before normal tag extraction begins.
+- Comments are stripped first, so `<ignore/>` inside comments does not skip the slide.
 
 ---
 
@@ -669,7 +697,12 @@ Regular visible text
 
 ### Parsing Order
 
-Tags are extracted from each slide in a specific pipeline order. Each extractor removes its tag from the body before the next one runs:
+Before the normal extraction pipeline runs:
+- Line comments are stripped.
+- Block comments are stripped.
+- Slides containing `<ignore/>` are dropped entirely.
+
+Then tags are extracted from each slide in a specific pipeline order. Each extractor removes its tag from the body before the next one runs:
 
 1. `<ai-sim>` (and its children `<ai-step>`, `<ai-final>`)
 2. `<align>`

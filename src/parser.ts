@@ -34,12 +34,20 @@ function trimOuterBlankLines(value: string): string {
   return value.replace(/^\n+/, '').replace(/\n+$/, '');
 }
 
+function hasIgnoreTag(source: string): boolean {
+  return /<ignore\s*\/>/i.test(source);
+}
+
 export function parseSlides(source: string): ParsedDeck {
   const normalized = stripCommentLines(normalizeDeckSource(source));
   const rawSlidesWithNotes = normalized.split(SLIDE_SEPARATOR).map(trimOuterBlankLines);
   const nonEmptySlidesWithNotes = rawSlidesWithNotes.filter((slide) => slide.length > 0);
+  const includedSlidesWithNotes = nonEmptySlidesWithNotes.filter((rawWithNotes) => {
+    const rawWithoutComments = stripBlockComments(rawWithNotes).replace(/^\n+/, '').replace(/\n+$/, '');
+    return !hasIgnoreTag(rawWithoutComments);
+  });
 
-  const slides = nonEmptySlidesWithNotes.map((rawWithNotes, index, all): Slide => {
+  const slides = includedSlidesWithNotes.map((rawWithNotes, index, all): Slide => {
     const presenterNotes = extractPresenterNotes(rawWithNotes);
     const raw = stripBlockComments(rawWithNotes).replace(/^\n+/, '').replace(/\n+$/, '');
     const hasQuestion = raw.includes(QUESTION_TOKEN);

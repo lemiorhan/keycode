@@ -84,6 +84,12 @@ Present it:
 # Preview slides in a floating window
 ./keycode preview my-talk
 
+# Export deck to PDF
+./keycode exportToPdf my-talk
+
+# Export with zoom factor (larger text)
+./keycode exportToPdf my-talk --zoom=1.5
+
 # Scaffold a new deck
 ./keycode init my-talk
 ```
@@ -129,6 +135,7 @@ Configure via `.env` file in the project root (see `.env.example`):
 |----------|-------------|---------|
 | `DECK_SOURCE_PATH` | Base directory for deck folders | `./decks` |
 | `SHOW_PRESENTER_NOTES` | Show presenter notes overlay | `false` |
+| `PDF_FONT_PATH` | Path to a monospace `.ttf`/`.otf` font for PDF export | System default |
 
 ## Slide Format
 
@@ -170,6 +177,7 @@ Step by Step
 | `<title>` | Large centered title text |
 | `<header>` | Colored section header |
 | `<beautify/>` | Apply decorative styling to the slide |
+| `<ignore/>` | Skip the entire slide |
 | `<size>` | Set text size (`normal`, `large`, `xlarge`) |
 | `<align>` | Set horizontal alignment (`left`, `center`, `right`) |
 | `<p>` | Paragraph with word wrapping and alignment |

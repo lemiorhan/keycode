@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- PDF export with `keycode exportToPdf <deck-name> [--zoom=N]` — exports all slides to a PDF file with dark background, colored monospace text, embedded images, and QR codes
+
 ## [0.1.0] - 2025-04-15
 
 ### Added

@@ -29,10 +29,12 @@ fi
 
 usage() {
   echo "Usage:" >&2
-  echo "  keycode present <deck-name>    present all .sld files in decks/<deck-name>/" >&2
-  echo "  keycode present <path/to/deck> present all .sld files in a deck directory" >&2
-  echo "  keycode preview <deck-name>    preview slides in a floating window" >&2
-  echo "  keycode init <deck-name>       scaffold a new deck in decks/" >&2
+  echo "  keycode present <deck-name>         present all .sld files in decks/<deck-name>/" >&2
+  echo "  keycode present <path/to/deck>      present all .sld files in a deck directory" >&2
+  echo "  keycode preview <deck-name>         preview slides in a floating window" >&2
+  echo "  keycode exportToPdf <deck-name>     export deck to PDF" >&2
+  echo "  keycode exportToPdf <deck> --zoom=N export with zoom factor (default 1.0)" >&2
+  echo "  keycode init <deck-name>            scaffold a new deck in decks/" >&2
   exit 1
 }
 
@@ -120,6 +122,15 @@ elif [ "$1" = "preview" ]; then
   fi
   ARG="$2"
   CLI_ENTRY="previewCli"
+elif [ "$1" = "exportToPdf" ]; then
+  if [ "$#" -lt 2 ]; then
+    echo "Usage: keycode exportToPdf <deck-name | path/to/deck> [--zoom=N]" >&2
+    exit 1
+  fi
+  ARG="$2"
+  shift 2
+  EXTRA_ARGS="$*"
+  CLI_ENTRY="exportPdfCli"
 else
   usage
 fi
@@ -138,7 +149,11 @@ if [ ! -d "$DECK_DIR" ]; then
 fi
 
 if [ -f "$SCRIPT_DIR/dist/src/${CLI_ENTRY}.js" ]; then
-  exec node "$SCRIPT_DIR/dist/src/${CLI_ENTRY}.js" "$DECK_DIR"
+  exec node "$SCRIPT_DIR/dist/src/${CLI_ENTRY}.js" "$DECK_DIR" ${EXTRA_ARGS:-}
 fi
 
-exec npx tsx "$SCRIPT_DIR/src/${CLI_ENTRY}.tsx" "$DECK_DIR"
+if [ -f "$SCRIPT_DIR/src/${CLI_ENTRY}.tsx" ]; then
+  exec npx tsx "$SCRIPT_DIR/src/${CLI_ENTRY}.tsx" "$DECK_DIR" ${EXTRA_ARGS:-}
+fi
+
+exec npx tsx "$SCRIPT_DIR/src/${CLI_ENTRY}.ts" "$DECK_DIR" ${EXTRA_ARGS:-}

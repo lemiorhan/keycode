@@ -6,6 +6,9 @@ dist/
 macos/.PresenterNotesOverlay
 macos/.PreviewOverlay
 
+# Generated PDF exports
+*.pdf
+
 # Editor and AI assistant local configs
 .claude/
 .cursor/
